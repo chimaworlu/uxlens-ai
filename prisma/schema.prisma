@@ -1,0 +1,278 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum PlanTier {
+  FREE
+  PRO
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  PAST_DUE
+  CANCELED
+}
+
+enum DocumentStatus {
+  UPLOADED
+  EXTRACTING
+  READY
+  FAILED
+}
+
+enum DocumentType {
+  PDF
+  DOCX
+  TXT
+  CSV
+}
+
+enum AnalysisStatus {
+  QUEUED
+  PROCESSING
+  READY
+  FAILED
+  STALE
+}
+
+enum InsightType {
+  THEME
+  PAIN_POINT
+  SUGGESTION
+  CONTRADICTION
+}
+
+enum ChatRole {
+  USER
+  ASSISTANT
+}
+
+model User {
+  id            String        @id @default(cuid())
+  email         String        @unique
+  emailVerified DateTime?
+  passwordHash  String?
+  name          String?
+  image         String?
+  plan          PlanTier      @default(FREE)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  projects      Project[]
+  subscription  Subscription?
+  usageRecords  UsageRecord[]
+  accounts      Account[]
+  sessions      Session[]
+}
+
+// Auth.js standard models
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Project {
+  id         String    @id @default(cuid())
+  userId     String
+  name       String
+  archivedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  documents    Document[]
+  analyses     Analysis[]
+  chatMessages ChatMessage[]
+
+  @@index([userId, archivedAt])
+}
+
+model Document {
+  id            String         @id @default(cuid())
+  projectId     String
+  filename      String
+  type          DocumentType
+  status        DocumentStatus @default(UPLOADED)
+  failureReason String?
+  r2Key         String         @unique
+  sizeBytes     Int
+  pageCount     Int?
+  extractedText String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  project Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  chunks  DocumentChunk[]
+
+  @@index([projectId, status])
+  // Note: extractedText can be large (full document text). It must be excluded
+  // from default Prisma selects on Document (use an explicit `select` that omits
+  // it for list/status queries); fetch it explicitly only where needed — the
+  // worker (chunking) and the citation panel (surrounding-text lookup).
+}
+
+model DocumentChunk {
+  id         String                       @id @default(cuid())
+  documentId String
+  ordinal    Int
+  content    String
+  charStart  Int
+  charEnd    Int
+  pageNumber   Int?
+  searchVector Unsupported("tsvector")?
+
+  document  Document   @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  citations Citation[]
+
+  @@unique([documentId, ordinal])
+  @@index([documentId])
+  // Created via raw SQL migration:
+  // CREATE INDEX chunk_search_idx ON "DocumentChunk" USING GIN ("searchVector");
+  // CREATE TRIGGER chunk_search_update BEFORE INSERT OR UPDATE ON "DocumentChunk"
+  //   FOR EACH ROW EXECUTE FUNCTION
+  //   tsvector_update_trigger("searchVector", 'pg_catalog.english', content);
+}
+
+model Analysis {
+  id               String         @id @default(cuid())
+  projectId        String
+  version          Int
+  status           AnalysisStatus @default(QUEUED)
+  failureReason    String?
+  progressStage    String?
+  executiveSummary String?
+  costUsd          Decimal?       @db.Decimal(8, 4)
+  documentCount    Int            @default(0)
+  createdAt        DateTime       @default(now())
+  completedAt      DateTime?
+
+  project  Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  insights Insight[]
+
+  @@unique([projectId, version])
+  @@index([projectId, status])
+}
+
+model Insight {
+  id            String      @id @default(cuid())
+  analysisId    String
+  type          InsightType
+  title         String
+  description   String
+  rank          Int
+  evidenceCount Int         @default(1)
+  starred       Boolean     @default(false)
+
+  analysis  Analysis   @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+  citations Citation[]
+
+  @@index([analysisId, type, rank])
+}
+
+model Citation {
+  id            String  @id @default(cuid())
+  insightId     String?
+  chatMessageId String?
+  chunkId       String
+  quote         String
+  charStart     Int
+  charEnd       Int
+
+  insight     Insight?      @relation(fields: [insightId], references: [id], onDelete: Cascade)
+  chatMessage ChatMessage?  @relation(fields: [chatMessageId], references: [id], onDelete: Cascade)
+  chunk       DocumentChunk @relation(fields: [chunkId], references: [id], onDelete: Cascade)
+
+  @@index([insightId])
+  @@index([chatMessageId])
+  @@index([chunkId])
+}
+
+model ChatMessage {
+  id        String    @id @default(cuid())
+  projectId String
+  role      ChatRole
+  content   String
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  project   Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  citations Citation[]
+
+  @@index([projectId, createdAt])
+}
+
+model Subscription {
+  id                    String             @id @default(cuid())
+  userId                String             @unique
+  status                SubscriptionStatus
+  flutterwavePlanId     String
+  flutterwaveCustomerId String?
+  currentPeriodEnd      DateTime
+  cancelAtPeriodEnd     Boolean            @default(false)
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model UsageRecord {
+  id        String   @id @default(cuid())
+  userId    String
+  kind      String   // "analysis_run" | "chat_message"
+  costUsd   Decimal? @db.Decimal(8, 4)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, kind, createdAt])
+  // Note: FR-21's monthly quota and FR-31's daily chat cap are enforced by
+  // counting UsageRecord rows for the current period via this index at
+  // request time. No separate counter/cache table at MVP; revisit only if
+  // this query shows up as a bottleneck.
+}
+
+model WebhookEvent {
+  id         String   @id @default(cuid())
+  provider   String   // "flutterwave"
+  txRef      String   @unique
+  payload    Json
+  processed  Boolean  @default(false)
+  receivedAt DateTime @default(now())
+}
