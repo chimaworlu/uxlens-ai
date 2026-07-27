@@ -22,8 +22,8 @@ Source of truth for every token in this file: the exported CSS custom properties
 
 - Nine type styles exist: `display-{large,medium,small}`, `headline-{large,medium,small}`, `title-{large,medium,small}`, `body-{large,medium,small}`, `label-{large,medium,small}` (fifteen total, three sizes × five categories). Every piece of text in the product uses one of these fifteen, referenced as a group — font-size, weight, letter-spacing, and line-height for a given style are never mixed with another style's values.
 - Never invent an intermediate size ("just a little bigger than body-large") by picking an arbitrary font-size. If nothing in the scale fits, that's a design system gap to raise, not a value to interpolate in code.
-- `DM Sans` is the only font family in this system. Never substitute a system font or a fallback as anything other than a true last-resort CSS fallback stack (e.g. `DM Sans, sans-serif`) — never as a primary choice for a new component.
-- All fifteen styles currently resolve to `fontweight: 500` or `600` (title-medium only) and `fontstyle: normal`. Don't introduce a bold/italic variant for a style that doesn't define one without checking whether the type scale actually needs a new style added, rather than a one-off override.
+- Two font families exist, split by role, never mixed within a single type style: `Fraunces` (serif) for `display-*`, `headline-*`, and `title-*` styles; `Inter` (sans) for `body-*` and `label-*` styles. Never substitute a system font or a fallback as anything other than a true last-resort CSS fallback stack (e.g. `Fraunces, serif` / `Inter, sans-serif`) — never as a primary choice for a new component, and never use one family where the scale specifies the other.
+- All fifteen styles currently resolve to `fontweight: 400`, except `label-large` at `500`. Don't introduce a bold/italic variant for a style that doesn't define one without checking whether the type scale actually needs a new style added, rather than a one-off override.
 
 ## Spacing: closed scale
 
@@ -32,8 +32,10 @@ Source of truth for every token in this file: the exported CSS custom properties
 
 ## Units — stated assumption, not left ambiguous
 
-- **[ASSUMPTION]** Every numeric spacing and typography token (`fontsize`, `lineheight`, `letterspacing`, spacing values) is treated as **px** when applied in CSS. This is inferred from the data itself — e.g. `display-large` has `fontsize: 57` and `lineheight: 85.5`, a 1.5 ratio consistent with px-based line-height authored in a design tool, not a unitless multiplier. If this assumption is wrong, it needs correcting at the token-consumption layer in one place, not per-component.
-- Whatever the unit, it is applied **consistently** across every token of the same kind. Never mix `px` for one component's spacing and `rem` for another's using the same token — pick one convention at the CSS-variable-consumption layer (e.g. a single Sass/JS helper that appends the unit) and use it everywhere.
+- Every numeric spacing and typography token (`fontsize`, `lineheight`, `letterspacing`, spacing values) is authored against a 16px root — inferred from the data itself, e.g. `display-large` has `fontsize: 57` and `lineheight: 85.5`, a 1.5 ratio consistent with a design tool's px-based line-height, not a unitless multiplier.
+- **Typography** (`fontsize`, `lineheight`, `letterspacing`) is applied in **rem**, not px, specifically so text scales with the user's browser/OS font-size preference (WCAG 1.4.4 Resize Text) instead of staying fixed. Implemented in `app/design-system.css` as `calc(var(--typography-*) / var(--ds-root-font-size) * 1rem)`, where `--ds-root-font-size: 16` is the one named divisor — never a repeated magic number. At the browser's default 16px root this produces the identical visual size as a plain px value; only the resize behavior changes.
+- **Spacing** (`--ds-spacing-*`) stays in **px** — it's layout, not text, and isn't in scope for text-resize behavior.
+- Whatever the unit for a given kind of token, it is applied **consistently** across every token of that kind. Never mix units for the same token category — pick one convention at the CSS-variable-consumption layer and use it everywhere.
 
 ## Border radius: closed scale
 

@@ -1,0 +1,323 @@
+/* ==========================================
+   BORDER RADIUS
+   Authoritative source: .agent/rules/design-system-rule.md
+   (design-tokens.css / .tokens.json never carry a radius scale — do not
+   move these into that generated file; see the rule doc for why.)
+   ========================================== */
+:root {
+  --ds-radius-small: 8px;
+  --ds-radius-medium: 12px;
+  --ds-radius-large: 16px;
+  --ds-radius-full: 999px;
+}
+
+/* ==========================================
+   SPACING (px-unit consumption layer)
+   design-tokens.css spacing values are unitless per design-system-rule.md's
+   unit assumption. This is the single place `px` is appended — components
+   consume --ds-spacing-* only, never the raw --spacing-* custom properties.
+   ========================================== */
+:root {
+  --ds-spacing-none: calc(var(--spacing-no-spacing) * 1px);
+  --ds-spacing-xs: calc(var(--spacing-extra-small-spacing) * 1px);
+  --ds-spacing-sm: calc(var(--spacing-small-spacing) * 1px);
+  --ds-spacing-md: calc(var(--spacing-medium-spacing) * 1px);
+  --ds-spacing-base: calc(var(--spacing-base-spacing) * 1px);
+  --ds-spacing-lg: calc(var(--spacing-large-spacing) * 1px);
+  --ds-spacing-xl: calc(var(--spacing-extra-large) * 1px);
+  --ds-spacing-xxl: calc(var(--spacing-very-large-spacing) * 1px);
+}
+
+/* ==========================================
+   TYPOGRAPHY — closed scale, 15 styles
+   Each class bundles font-family/size/weight/style/letter-spacing/line-height
+   as a group, per design-system-rule.md ("never mixed with another style's
+   values"). Fraunces serves display/headline/title; Inter serves body/label.
+
+   font-size, letter-spacing, and line-height are in rem, not px, so text
+   scales with the user's browser/OS font-size preference (WCAG 1.4.4 Resize
+   Text) instead of staying frozen. The raw tokens are unitless numbers
+   authored against a 16px root (design-system-rule.md's stated px
+   assumption); --ds-root-font-size is that divisor, named once instead of
+   repeated as a magic number. At the browser default (16px root) this
+   produces the exact same visual sizes as before — only the resize
+   behavior changes.
+   ========================================== */
+:root {
+  --ds-root-font-size: 16;
+}
+
+.ds-display-large,
+.ds-display-medium,
+.ds-display-small,
+.ds-headline-large,
+.ds-headline-medium,
+.ds-headline-small,
+.ds-title-large,
+.ds-title-medium,
+.ds-title-small,
+.ds-body-large,
+.ds-body-medium,
+.ds-body-small,
+.ds-label-large,
+.ds-label-medium,
+.ds-label-small {
+  margin: 0;
+  text-decoration: none;
+  text-transform: none;
+}
+
+.ds-display-large {
+  font-family: var(--typography-display-large-fontfamily), serif;
+  font-size: calc(var(--typography-display-large-fontsize) / var(--ds-root-font-size) * 1rem);
+  font-weight: var(--typography-display-large-fontweight);
+  font-style: var(--typography-display-large-fontstyle);
+  letter-spacing: calc(var(--typography-display-large-letterspacing) / var(--ds-root-font-size) * 1rem);
+  line-height: calc(var(--typography-display-large-lineheight) / var(--ds-root-font-size) * 1rem);
+}
+.ds-display-medium {
+  font-family: var(--typography-display-medium-fontfamily), serif;
+  /* Fluid between a 320px and 480px viewport, so the hero headline reaches
+     its full 50px on any normal desktop/laptop/tablet window and only
+     actually shrinks on phone-width screens. Bounds are rem, not px, so
+     both ends still respect the user's root font-size (WCAG 1.4.4) — only
+     the interpolation between them tracks viewport width.
+     Derivation (standard linear-interpolation fluid-type formula):
+       slope = (3.125rem - 2rem) / (480px - 320px) = 0.703125vw
+       intercept = 2rem - slope * 320px = -0.25rem */
+  font-size: clamp(2rem, -0.25rem + 0.703125vw, 3.125rem);
+  font-weight: var(--typography-display-medium-fontweight);
+  font-style: var(--typography-display-medium-fontstyle);
+  /* Letter-spacing scales down together with font-size instead of staying
+     fixed, so a fixed -2px tracking doesn't get proportionally tighter and
+     more cramped-looking as the glyphs shrink. Eases toward -0.03125rem
+     (-0.5px, not all the way to 0) rather than the exact same ratio as
+     font-size, so it never reads as over-squeezed at the smallest sizes.
+     Same 320-480px range, same formula:
+       slope = (-0.125rem - (-0.03125rem)) / (480px - 320px) = -0.0585938vw
+       intercept = -0.03125rem - slope * 320px = 0.15625rem */
+  letter-spacing: clamp(-0.125rem, 0.15625rem - 0.0585938vw, -0.03125rem);
+  /* Tightened from the authored 75px/1.5 ratio to 1.2 — the ratio already
+     used by display-small in this same family — per explicit request to
+     reduce it. Unitless, not a fixed rem value, so it stays proportionate
+     as the clamp above shrinks the text. */
+  line-height: 1.2;
+}
+.ds-display-small {
+  font-family: var(--typography-display-small-fontfamily), serif;
+  /* Fluid between a 320px and 720px viewport (this file's existing mobile
+     breakpoint). Bounds are rem, not px, so both ends still respect the
+     user's root font-size (WCAG 1.4.4) — only the interpolation between
+     them tracks viewport width. Max (2.5rem = 40px) is the token's
+     authored size, unchanged on larger screens; min (1.75rem = 28px) is a
+     readable floor for small phones.
+     Derivation (standard linear-interpolation fluid-type formula):
+       slope = (2.5rem - 1.75rem) / (720px - 320px) = 0.1875vw
+       intercept = 1.75rem - slope * 320px = 1.15rem */
+  font-size: clamp(1.75rem, 1.15rem + 0.1875vw, 2.5rem);
+  font-weight: var(--typography-display-small-fontweight);
+  font-style: var(--typography-display-small-fontstyle);
+  /* Letter-spacing scales down together with font-size instead of staying
+     fixed, because a fixed -1.2px tracking gets proportionally *tighter* —
+     and more cramped-looking — as the glyphs shrink. It eases toward
+     -0.03125rem (-0.5px, deliberately not all the way to 0) rather than
+     following the exact same ratio as font-size, so it never reads as
+     over-squeezed at the smallest sizes. Same formula, using the
+     letter-spacing bounds in place of the font-size ones:
+       slope = (-0.075rem - (-0.03125rem)) / (720px - 320px) = -0.010938vw
+       intercept = -0.03125rem - slope * 320px = 0.00375rem */
+  letter-spacing: clamp(-0.075rem, 0.00375rem - 0.010938vw, -0.03125rem);
+  /* Unitless, not a fixed rem value: locks to the token's authored 48/40
+     = 1.2 ratio at whatever size font-size actually renders at, so wrapped
+     lines stay proportionate as the clamp above shrinks the text. */
+  line-height: 1.2;
+}
+.ds-headline-large {
+  font-family: var(--typography-headline-large-fontfamily), serif;
+  font-size: calc(var(--typography-headline-large-fontsize) / var(--ds-root-font-size) * 1rem);
+  font-weight: var(--typography-headline-large-fontweight);
+  font-style: var(--typography-headline-large-fontstyle);
+  letter-spacing: calc(var(--typography-headline-large-letterspacing) / var(--ds-root-font-size) * 1rem);
+  line-height: calc(var(--typography-headline-large-lineheight) / var(--ds-root-font-size) * 1rem);
+}
+.ds-headline-medium {
+  font-family: var(--typography-headline-medium-fontfamily), serif;
+  font-size: calc(var(--typography-headline-medium-fontsize) / var(--ds-root-font-size) * 1rem);
+  font-weight: var(--typography-headline-medium-fontweight);
+  font-style: var(--typography-headline-medium-fontstyle);
+  letter-spacing: calc(var(--typography-headline-medium-letterspacing) / var(--ds-root-font-size) * 1rem);
+  line-height: calc(var(--typography-headline-medium-lineheight) / var(--ds-root-font-size) * 1rem);
+}
+.ds-headline-small {
+  font-family: var(--typography-headline-small-fontfamily), serif;
+  font-size: calc(var(--typography-headline-small-fontsize) / var(--ds-root-font-size) * 1rem);
+  font-weight: var(--typography-headline-small-fontweight);
+  font-style: var(--typography-headline-small-fontstyle);
+  letter-spacing: calc(var(--typography-headline-small-letterspacing) / var(--ds-root-font-size) * 1rem);
+  line-height: calc(var(--typography-headline-small-lineheight) / var(--ds-root-font-size) * 1rem);
+}
+.ds-title-large {
+  font-family: var(--typography-title-large-fontfamily), serif;
+  font-size: calc(var(--typography-title-large-fontsize) / var(--ds-root-font-size) * 1rem);
+  font-weight: var(--typography-title-large-fontweight);
+  font-style: var(--typography-title-large-fontstyle);
+  letter-spacing: calc(var(--typography-title-large-letterspacing) / var(--ds-root-font-size) * 1rem);
+  line-height: calc(var(--typography-title-large-lineheight) / var(--ds-root-font-size) * 1rem);
+}
+.ds-title-medium {
+  font-family: var(--typography-title-medium-fontfamily), serif;
+  font-size: calc(var(--typography-title-medium-fontsize) / var(--ds-root-font-size) * 1rem);
+  font-weight: var(--typography-title-medium-fontweight);
+  font-style: var(--typography-title-medium-fontstyle);
+  letter-spacing: calc(var(--typography-title-medium-letterspacing) / var(--ds-root-font-size) * 1rem);
+  line-height: calc(var(--typography-title-medium-lineheight) / var(--ds-root-font-size) * 1rem);
+}
+.ds-title-small {
+  font-family: var(--typography-title-small-fontfamily), serif;
+  font-size: calc(var(--typography-title-small-fontsize) / var(--ds-root-font-size) * 1rem);
+  font-weight: var(--typography-title-small-fontweight);
+  font-style: var(--typography-title-small-fontstyle);
+  letter-spacing: calc(var(--typography-title-small-letterspacing) / var(--ds-root-font-size) * 1rem);
+  line-height: calc(var(--typography-title-small-lineheight) / var(--ds-root-font-size) * 1rem);
+}
+.ds-body-large {
+  font-family: var(--typography-body-large-fontfamily), sans-serif;
+  font-size: calc(var(--typography-body-large-fontsize) / var(--ds-root-font-size) * 1rem);
+  font-weight: var(--typography-body-large-fontweight);
+  font-style: var(--typography-body-large-fontstyle);
+  letter-spacing: calc(var(--typography-body-large-letterspacing) / var(--ds-root-font-size) * 1rem);
+  line-height: calc(var(--typography-body-large-lineheight) / var(--ds-root-font-size) * 1rem);
+}
+.ds-body-medium {
+  font-family: var(--typography-body-medium-fontfamily), sans-serif;
+  font-size: calc(var(--typography-body-medium-fontsize) / var(--ds-root-font-size) * 1rem);
+  font-weight: var(--typography-body-medium-fontweight);
+  font-style: var(--typography-body-medium-fontstyle);
+  letter-spacing: calc(var(--typography-body-medium-letterspacing) / var(--ds-root-font-size) * 1rem);
+  line-height: calc(var(--typography-body-medium-lineheight) / var(--ds-root-font-size) * 1rem);
+}
+.ds-body-small {
+  font-family: var(--typography-body-small-fontfamily), sans-serif;
+  font-size: calc(var(--typography-body-small-fontsize) / var(--ds-root-font-size) * 1rem);
+  font-weight: var(--typography-body-small-fontweight);
+  font-style: var(--typography-body-small-fontstyle);
+  letter-spacing: calc(var(--typography-body-small-letterspacing) / var(--ds-root-font-size) * 1rem);
+  line-height: calc(var(--typography-body-small-lineheight) / var(--ds-root-font-size) * 1rem);
+}
+.ds-label-large {
+  font-family: var(--typography-label-large-fontfamily), sans-serif;
+  font-size: calc(var(--typography-label-large-fontsize) / var(--ds-root-font-size) * 1rem);
+  font-weight: var(--typography-label-large-fontweight);
+  font-style: var(--typography-label-large-fontstyle);
+  letter-spacing: calc(var(--typography-label-large-letterspacing) / var(--ds-root-font-size) * 1rem);
+  line-height: calc(var(--typography-label-large-lineheight) / var(--ds-root-font-size) * 1rem);
+}
+.ds-label-medium {
+  font-family: var(--typography-label-medium-fontfamily), sans-serif;
+  font-size: calc(var(--typography-label-medium-fontsize) / var(--ds-root-font-size) * 1rem);
+  font-weight: var(--typography-label-medium-fontweight);
+  font-style: var(--typography-label-medium-fontstyle);
+  letter-spacing: calc(var(--typography-label-medium-letterspacing) / var(--ds-root-font-size) * 1rem);
+  line-height: calc(var(--typography-label-medium-lineheight) / var(--ds-root-font-size) * 1rem);
+}
+.ds-label-small {
+  font-family: var(--typography-label-small-fontfamily), sans-serif;
+  font-size: calc(var(--typography-label-small-fontsize) / var(--ds-root-font-size) * 1rem);
+  font-weight: var(--typography-label-small-fontweight);
+  font-style: var(--typography-label-small-fontstyle);
+  letter-spacing: calc(var(--typography-label-small-letterspacing) / var(--ds-root-font-size) * 1rem);
+  line-height: calc(var(--typography-label-small-lineheight) / var(--ds-root-font-size) * 1rem);
+}
+
+/* ==========================================
+   STANDARD PATTERNS
+   ========================================== */
+.ds-focus-ring:focus-visible {
+  outline: 2px solid var(--color-roles-primary);
+  outline-offset: 2px;
+}
+
+/* Windows High Contrast Mode substitutes authored colors with a fixed system
+   palette. The custom primary-color outline above gets stripped along with
+   everything else in that mode, so give it back a system-color equivalent
+   rather than losing the focus indicator entirely. */
+@media (forced-colors: active) {
+  .ds-focus-ring:focus-visible {
+    outline-color: Highlight;
+  }
+}
+
+:root {
+  --ds-hairline-border: 1px solid var(--color-roles-surface-variant);
+}
+
+/* ==========================================
+   DARK MODE — derived, not designed
+   design-tokens.tokens.json / design-tokens.css hold exactly one (light)
+   palette; per design-system-rule.md that generated file is never
+   hand-edited. This block instead overrides the role-level custom
+   properties at the consumption layer, scoped to prefers-color-scheme, so
+   design-tokens.css stays untouched and every component — which already
+   only ever references --color-roles-*, never a primitive directly —
+   re-themes automatically with zero component-code changes.
+
+   These values are DERIVED, not Figma-authored: no dark tonal palette
+   exists yet. Method, so the derivation is checkable rather than guessed
+   blind:
+   - surface/on-surface: swapped with the existing neutral10/neutral98
+     primitives (just inverted roles, no new hex).
+   - surface-variant/on-surface-variant and the surface-container elevation
+     ramp: new dark neutrals, each contrast-checked against its paired
+     surface (>=3:1 for the variant/border tone, >=4.5:1 for on-surface-
+     variant text) rather than picked by eye.
+   - accent families (primary/secondary/tertiary/error/success): "-role"
+     is the existing base tone (e.g. primary40) with lightness raised to
+     ~72% in HSL, hue/saturation held constant, then contrast-verified
+     >=4.5:1 against the dark surface; "-on-role" reuses a flat dark ink
+     (neutral10) rather than a hue-tinted one, to keep the derivation
+     simple and legible; "-container"/"-on-container" reuse the existing
+     30/90 tones outright (M3's own dark scheme maps container fills to
+     roughly the light scheme's 30 tone) — zero invented hex there.
+   Replace this block wholesale if/when a real dark palette is exported
+   from the design source. */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-roles-primary: #8096e5; /* derived: primary40 (#3457d5) hue/sat, L->72% */
+    --color-roles-on-primary: var(--primitives-neutral-color-palette-neutral10);
+    --color-roles-primary-container: var(--primitives-primary-color-palette-primary30);
+    --color-roles-on-primary-container: var(--primitives-primary-color-palette-primary90);
+
+    --color-roles-secondary: #efc380; /* derived: secondary40 (#b67616) hue/sat, L->72% */
+    --color-roles-on-secondary: var(--primitives-neutral-color-palette-neutral10);
+    --color-roles-secondary-container: var(--primitives-secondary-color-palette-secondary30);
+    --color-roles-on-secondary-container: var(--primitives-secondary-color-palette-secondary90);
+
+    --color-roles-tertiary: #d5bf9a; /* derived: tertiary40 (#90713c) hue/sat, L->72% */
+    --color-roles-on-tertiary: var(--primitives-neutral-color-palette-neutral10);
+    --color-roles-tertiary-container: var(--primitives-tertiary-color-palette-tertiary30);
+    --color-roles-on-tertiary-container: var(--primitives-tertiary-color-palette-tertiary90);
+
+    --color-roles-error: #eb8484; /* derived: error40 (#b01c1c) hue/sat, L->72% */
+    --color-roles-on-error: var(--primitives-neutral-color-palette-neutral10);
+    --color-roles-error-container: var(--primitives-error-color-palette-error30);
+    --color-roles-on-error-container: var(--primitives-error-color-palette-error90);
+
+    --color-roles-success: #97d89a; /* derived: success40 (#37953c) hue/sat, L->72% */
+    --color-roles-on-success: var(--primitives-neutral-color-palette-neutral10);
+    --color-roles-success-container: var(--primitives-success-color-palette-success30);
+    --color-roles-on-success-container: var(--primitives-success-color-palette-success90);
+
+    --color-roles-surface: var(--primitives-neutral-color-palette-neutral10);
+    --color-roles-on-surface: var(--primitives-neutral-color-palette-neutral98);
+    --color-roles-surface-variant: #707070; /* derived: >=3:1 against dark surface */
+    --color-roles-on-surface-variant: #b3b3b3; /* derived: ~8:1 against dark surface */
+    --color-roles-surface-container-lowest: #121212;
+    --color-roles-surface-container-low: #1e1e1e;
+    --color-roles-surface-container: #232323;
+    --color-roles-surface-container-high: #2c2c2c;
+    --color-roles-surface-container-highest: #383838;
+    --color-roles-inverse-surface: var(--primitives-neutral-color-palette-neutral95);
+    --color-roles-inverse-on-surface: var(--primitives-neutral-color-palette-neutral20);
+    --color-roles-surface-tint: #8096e5;
+  }
+}

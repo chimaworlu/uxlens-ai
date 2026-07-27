@@ -1,0 +1,29 @@
+@import "../design-tokens.css";
+@import "./design-system.css";
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scrollbar-gutter: stable;
+}
+
+html,
+body {
+  padding: 0;
+  margin: 0;
+}
+
+body {
+  background-color: var(--color-roles-surface);
+  color: var(--color-roles-on-surface);
+}
+
+a {
+  color: inherit;
+}
+
+button {
+  font: inherit;
+}
