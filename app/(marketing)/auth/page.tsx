@@ -199,7 +199,7 @@ function SignInCard({
         </button>
 
         {submitError && (
-          <span className={`${styles.errorText} ds-label-medium`} role="alert">
+          <span className={`${styles.errorText} ds-label-medium`} role="alert" aria-live="polite">
             {submitError}
           </span>
         )}
@@ -321,7 +321,7 @@ function SignUpCard({
         />
 
         {submitError && (
-          <span className={`${styles.errorText} ds-label-medium`} role="alert">
+          <span className={`${styles.errorText} ds-label-medium`} role="alert" aria-live="polite">
             {submitError}
           </span>
         )}
@@ -416,7 +416,7 @@ function ResetRequestCard({
         />
 
         {submitError && (
-          <span className={`${styles.errorText} ds-label-medium`} role="alert">
+          <span className={`${styles.errorText} ds-label-medium`} role="alert" aria-live="polite">
             {submitError}
           </span>
         )}
@@ -532,7 +532,7 @@ function ResetVerifyCard({
         </div>
 
         {error && (
-          <span className={`${styles.errorText} ds-label-medium`} role="alert">
+          <span className={`${styles.errorText} ds-label-medium`} role="alert" aria-live="polite">
             {error}
           </span>
         )}
@@ -648,7 +648,7 @@ function ResetNewPasswordCard({
         />
 
         {submitError && (
-          <span className={`${styles.errorText} ds-label-medium`} role="alert">
+          <span className={`${styles.errorText} ds-label-medium`} role="alert" aria-live="polite">
             {submitError}
           </span>
         )}
@@ -819,13 +819,17 @@ function PasswordField({
         </span>
       )}
       {showRequirements && value.length > 0 && (
-        <ul id={requirementsId} className={styles.passwordRequirements} role="status">
+        <ul id={requirementsId} className={styles.passwordRequirements} role="status" aria-live="polite" aria-atomic="false">
           {getPasswordRequirements(value).map((requirement) => (
             <li
               key={requirement.label}
               className={`${styles.passwordRequirement} ds-label-small ${requirement.met ? styles.passwordRequirementMet : styles.passwordRequirementUnmet}`}
+              aria-label={`${requirement.label}: ${requirement.met ? "met" : "not met"}`}
             >
-              <span className={styles.passwordRequirementIcon} aria-hidden="true">
+              <span
+                className={`${styles.passwordRequirementIcon} ${requirement.met ? styles.passwordRequirementIconMet : styles.passwordRequirementIconUnmet}`}
+                aria-hidden="true"
+              >
                 {requirement.met ? "✓" : "*"}
               </span>
               <span>{requirement.label}</span>

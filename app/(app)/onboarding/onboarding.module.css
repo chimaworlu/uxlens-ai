@@ -101,6 +101,10 @@
   background-color: var(--color-roles-primary);
 }
 
+.dot[aria-hidden="true"] {
+  /* Decorative only; the text step count carries the meaning. */
+}
+
 .stepLabel {
   color: var(--color-roles-on-surface-variant);
   margin-top: calc(-1 * var(--ds-spacing-sm));

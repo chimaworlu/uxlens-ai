@@ -236,6 +236,14 @@
   color: var(--color-roles-error);
 }
 
+.passwordRequirementIconMet {
+  color: #2e7d32;
+}
+
+.passwordRequirementIconUnmet {
+  color: var(--color-roles-error);
+}
+
 .passwordInputWrap {
   position: relative;
   display: flex;

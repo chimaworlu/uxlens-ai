@@ -55,6 +55,7 @@ function OnboardingContent() {
               <span
                 key={n}
                 className={`${styles.dot} ${n === step ? styles.dotActive : ""}`}
+                aria-hidden="true"
               />
             ))}
           </div>
