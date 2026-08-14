@@ -315,7 +315,6 @@ function VerifyEmailBanner({
   email: string;
   onVerified: () => void;
 }) {
-  const [dismissed, setDismissed] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [sending, setSending] = useState(false);
   const [sentMessage, setSentMessage] = useState<string | null>(null);
@@ -373,15 +372,6 @@ function VerifyEmailBanner({
     }
   }
 
-  // Dismissing just hides the nudge for this visit — it's not gating
-  // anything, so there's nothing to "unlock" by keeping it on screen. No
-  // persistence for the dismissal (no session system to hang it on yet);
-  // it reappears on a fresh page load, same as it would on a real site
-  // that reminds you again next time rather than never again.
-  if (dismissed) {
-    return null;
-  }
-
   return (
     <div className={styles.banner}>
       <div className={styles.bannerRow}>
@@ -403,7 +393,7 @@ function VerifyEmailBanner({
 
       <button
         type="button"
-        onClick={() => setDismissed(true)}
+        onClick={() => setExpanded(false)}
         aria-label="Dismiss verify email notice"
         className={`${styles.dismissButton} ds-focus-ring`}
       >

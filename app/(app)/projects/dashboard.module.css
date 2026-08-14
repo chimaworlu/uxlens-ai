@@ -243,12 +243,6 @@
   }
 }
 
-@media (max-width: 720px) {
-  .banner {
-    padding-top: calc(var(--ds-spacing-lg) + var(--ds-spacing-sm));
-  }
-}
-
 .bannerExpanded {
   display: flex;
   flex-direction: column;
