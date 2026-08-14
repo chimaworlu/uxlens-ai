@@ -319,6 +319,41 @@
   padding: var(--ds-spacing-lg);
 }
 
+.snackbar {
+  position: fixed;
+  left: 50%;
+  bottom: var(--ds-spacing-lg);
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-spacing-md);
+  max-width: min(92vw, 420px);
+  padding: var(--ds-spacing-md) var(--ds-spacing-lg);
+  border-radius: var(--ds-radius-medium);
+  background-color: var(--color-roles-success-container);
+  color: var(--color-roles-on-success-container);
+  box-shadow: var(--effect-button-shadow-soft);
+  z-index: 20;
+}
+
+.snackbarMessage {
+  flex: 1;
+}
+
+.snackbarClose {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--ds-radius-small);
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
+
 .emptyState {
   display: flex;
   flex-direction: column;

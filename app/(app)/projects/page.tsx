@@ -31,6 +31,7 @@ function DashboardContent() {
   const [projectLimit, setProjectLimit] = useState(3);
   const [projects, setProjects] = useState<Project[]>([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (!email) {
@@ -65,6 +66,10 @@ function DashboardContent() {
   function handleProjectCreated(project: Project) {
     setProjects((current) => [project, ...current]);
     setShowCreateModal(false);
+  }
+
+  function showVerificationSnackbar() {
+    setSnackbarMessage("Email Verified Successfully!");
   }
 
   return (
@@ -112,7 +117,10 @@ function DashboardContent() {
               {!verified && (
                 <VerifyEmailBanner
                   email={email}
-                  onVerified={() => setVerified(true)}
+                  onVerified={() => {
+                    setVerified(true);
+                    showVerificationSnackbar();
+                  }}
                 />
               )}
 
@@ -155,6 +163,13 @@ function DashboardContent() {
           email={email}
           onClose={() => setShowCreateModal(false)}
           onCreated={handleProjectCreated}
+        />
+      )}
+
+      {snackbarMessage && (
+        <Snackbar
+          message={snackbarMessage}
+          onClose={() => setSnackbarMessage(null)}
         />
       )}
     </div>
@@ -439,6 +454,36 @@ function VerifyEmailBanner({
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+function Snackbar({
+  message,
+  onClose,
+}: {
+  message: string;
+  onClose: () => void;
+}) {
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      onClose();
+    }, 10000);
+
+    return () => window.clearTimeout(timer);
+  }, [onClose]);
+
+  return (
+    <div className={styles.snackbar} role="status" aria-live="polite">
+      <span className={styles.snackbarMessage}>{message}</span>
+      <button
+        type="button"
+        className={`${styles.snackbarClose} ds-focus-ring`}
+        aria-label="Dismiss notification"
+        onClick={onClose}
+      >
+        <CloseIcon />
+      </button>
     </div>
   );
 }
