@@ -41,6 +41,10 @@
   .actions {
     flex-direction: column;
   }
+
+  .buttonLink {
+    align-self: center;
+  }
 }
 
 @media (max-width: 420px) {
@@ -176,9 +180,24 @@
   transition: filter 0.15s ease;
 }
 
+.buttonLink {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: var(--color-roles-primary);
+  text-decoration: underline;
+  width: fit-content;
+  align-self: center;
+}
+
 @media (hover: hover) and (pointer: fine) {
   .buttonSecondary:hover {
     filter: brightness(0.96);
+  }
+
+  .buttonLink:hover {
+    text-decoration-thickness: 2px;
   }
 }
 

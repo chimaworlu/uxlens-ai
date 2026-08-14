@@ -161,6 +161,13 @@ function OnboardingContent() {
                 </button>
                 <button
                   type="button"
+                  className={`${styles.buttonLink} ds-label-medium ds-focus-ring`}
+                  onClick={() => router.push(`/projects?email=${encodeURIComponent(email)}`)}
+                >
+                  Skip for now
+                </button>
+                <button
+                  type="button"
                   className={`${styles.buttonPrimary} ds-label-large ds-focus-ring`}
                   onClick={goNextStep}
                 >
