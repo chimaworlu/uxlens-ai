@@ -161,7 +161,7 @@ function OnboardingContent() {
                   className={`${styles.buttonPrimary} ds-label-large ds-focus-ring`}
                   onClick={goToDashboard}
                 >
-                  Create your first project
+                  Continue
                 </button>
               </div>
             </>
