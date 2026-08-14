@@ -19,10 +19,6 @@ type View =
   | "reset-verify"
   | "reset-new-password";
 
-const GOOGLE_SIGN_IN_AVAILABLE = Boolean(
-  process.env.NEXT_PUBLIC_GOOGLE_SIGN_IN_AVAILABLE === "true"
-);
-
 const TITLE_COPY: Record<View, string> = {
   "sign-in": "Sign in — UXLens AI",
   "sign-up": "Sign up — UXLens AI",
@@ -173,11 +169,6 @@ function SignInCard({
       </div>
 
       <GoogleButton />
-      {!GOOGLE_SIGN_IN_AVAILABLE && (
-        <p className={`${styles.helperText} ds-label-small`}>
-          Google sign-in is not set up yet.
-        </p>
-      )}
       <Divider />
 
       <form className={styles.form} onSubmit={handleSubmit}>
@@ -842,21 +833,6 @@ function PasswordField({
 }
 
 function GoogleButton() {
-  if (!GOOGLE_SIGN_IN_AVAILABLE) {
-    return (
-      <button
-        type="button"
-        className={`${styles.googleButton} ds-label-large ds-focus-ring`}
-        disabled
-        aria-disabled="true"
-        title="Google sign-in is not set up yet"
-      >
-        <GoogleIcon />
-        Continue with Google
-      </button>
-    );
-  }
-
   return (
     <button
       type="button"

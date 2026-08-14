@@ -36,6 +36,11 @@
   text-align: center;
 }
 
+.stepPurpose {
+  color: var(--color-roles-primary);
+  margin-top: calc(-1 * var(--ds-spacing-xs));
+}
+
 .dots {
   display: flex;
   align-items: center;
@@ -94,6 +99,33 @@
 
 .planRow span:last-child {
   font-weight: 500;
+}
+
+.actions {
+  width: 100%;
+  display: flex;
+  gap: var(--ds-spacing-sm);
+}
+
+.buttonSecondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  border: 1px solid var(--color-roles-surface-variant);
+  cursor: pointer;
+  font-weight: 400;
+  background-color: transparent;
+  color: var(--color-roles-on-surface);
+  border-radius: var(--ds-radius-small);
+  padding: var(--ds-spacing-sm) var(--ds-spacing-lg);
+  transition: filter 0.15s ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .buttonSecondary:hover {
+    filter: brightness(0.96);
+  }
 }
 
 .buttonPrimary {

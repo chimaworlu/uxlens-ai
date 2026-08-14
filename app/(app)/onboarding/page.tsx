@@ -6,6 +6,12 @@ import styles from "./onboarding.module.css";
 
 const TOTAL_STEPS = 3;
 
+const STEP_LABELS = {
+  1: "What UXLens does",
+  2: "Privacy note",
+  3: "Get started",
+} as const;
+
 const PLAN_LIMITS: { label: string; value: string }[] = [
   { label: "Active projects", value: "3" },
   { label: "Documents per project", value: "10" },
@@ -55,6 +61,9 @@ function OnboardingContent() {
           <span className={`${styles.stepLabel} ds-label-medium`}>
             Step {step} of {TOTAL_STEPS}
           </span>
+          <span className={`${styles.stepPurpose} ds-label-medium`}>
+            {STEP_LABELS[step as keyof typeof STEP_LABELS]}
+          </span>
 
           {step === 1 && (
             <>
@@ -68,13 +77,22 @@ function OnboardingContent() {
                 linked back to the exact sentence it came from, so you can
                 trust what you&apos;re looking at.
               </p>
-              <button
-                type="button"
-                className={`${styles.buttonPrimary} ds-label-large ds-focus-ring`}
-                onClick={() => setStep(2)}
-              >
-                Continue
-              </button>
+              <div className={styles.actions}>
+                <button
+                  type="button"
+                  className={`${styles.buttonSecondary} ds-label-large ds-focus-ring`}
+                  onClick={() => router.push(`/projects?email=${encodeURIComponent(email)}`)}
+                >
+                  Skip for now
+                </button>
+                <button
+                  type="button"
+                  className={`${styles.buttonPrimary} ds-label-large ds-focus-ring`}
+                  onClick={() => setStep(2)}
+                >
+                  Continue
+                </button>
+              </div>
             </>
           )}
 
@@ -89,28 +107,37 @@ function OnboardingContent() {
               <p className={`${styles.body} ds-body-large`}>
                 Research documents often contain personal data about
                 participants. Remove names and identifying details you do not
-                need. Files are stored privately and never used to train AI
-                models.
+                need. Files are processed privately and used only to generate
+                your analysis.
               </p>
-              <button
-                type="button"
-                className={`${styles.buttonPrimary} ds-label-large ds-focus-ring`}
-                onClick={() => setStep(3)}
-              >
-                Continue
-              </button>
+              <div className={styles.actions}>
+                <button
+                  type="button"
+                  className={`${styles.buttonSecondary} ds-label-large ds-focus-ring`}
+                  onClick={() => setStep(1)}
+                >
+                  Back
+                </button>
+                <button
+                  type="button"
+                  className={`${styles.buttonPrimary} ds-label-large ds-focus-ring`}
+                  onClick={() => setStep(3)}
+                >
+                  Continue
+                </button>
+              </div>
             </>
           )}
 
           {step === 3 && (
             <>
               <h1 className={`${styles.heading} ds-headline-small`}>
-                You&apos;re on the Free plan
+                You&apos;re ready to start
               </h1>
               <p className={`${styles.body} ds-body-medium`}>
-                Here&apos;s what&apos;s included to get started.
+                Your account is ready. Create your first project to begin uploading research.
               </p>
-              <div className={styles.planTable}>
+              <div className={styles.planTable} aria-label="Free plan limits">
                 {PLAN_LIMITS.map((row) => (
                   <div key={row.label} className={`${styles.planRow} ds-body-medium`}>
                     <span>{row.label}</span>
@@ -121,13 +148,22 @@ function OnboardingContent() {
               <p className={`${styles.body} ds-label-small`}>
                 You can upgrade to Pro anytime for higher limits.
               </p>
-              <button
-                type="button"
-                className={`${styles.buttonPrimary} ds-label-large ds-focus-ring`}
-                onClick={goToDashboard}
-              >
-                Continue
-              </button>
+              <div className={styles.actions}>
+                <button
+                  type="button"
+                  className={`${styles.buttonSecondary} ds-label-large ds-focus-ring`}
+                  onClick={() => setStep(2)}
+                >
+                  Back
+                </button>
+                <button
+                  type="button"
+                  className={`${styles.buttonPrimary} ds-label-large ds-focus-ring`}
+                  onClick={goToDashboard}
+                >
+                  Create your first project
+                </button>
+              </div>
             </>
           )}
         </div>
