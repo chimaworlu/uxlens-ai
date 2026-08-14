@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useMemo, useRef, useState, type TouchEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import styles from "./onboarding.module.css";
 
@@ -34,6 +34,43 @@ function OnboardingContent() {
   const email = searchParams.get("email") ?? "";
 
   const [step, setStep] = useState(1);
+  const touchStartX = useRef<number | null>(null);
+  const touchStartY = useRef<number | null>(null);
+
+  const swipeHint = useMemo(() => ({ "data-swipe-hint": true }), []);
+
+  function goNextStep() {
+    setStep((current) => Math.min(current + 1, TOTAL_STEPS));
+  }
+
+  function goPreviousStep() {
+    setStep((current) => Math.max(current - 1, 1));
+  }
+
+  function handleTouchStart(event: TouchEvent<HTMLDivElement>) {
+    const touch = event.touches[0];
+    touchStartX.current = touch.clientX;
+    touchStartY.current = touch.clientY;
+  }
+
+  function handleTouchEnd(event: TouchEvent<HTMLDivElement>) {
+    if (touchStartX.current === null || touchStartY.current === null) return;
+
+    const touch = event.changedTouches[0];
+    const deltaX = touch.clientX - touchStartX.current;
+    const deltaY = touch.clientY - touchStartY.current;
+
+    touchStartX.current = null;
+    touchStartY.current = null;
+
+    if (Math.abs(deltaX) < 60 || Math.abs(deltaX) < Math.abs(deltaY)) return;
+
+    if (deltaX < 0) {
+      goNextStep();
+    } else {
+      goPreviousStep();
+    }
+  }
 
   function goToDashboard() {
     // No real session yet (see AGENTS.md gap flagged in conversation) —
@@ -49,7 +86,13 @@ function OnboardingContent() {
       </nav>
 
       <main className={styles.main}>
-        <div className={styles.card}>
+        <div
+          className={styles.card}
+          aria-label={`Onboarding step ${step} of ${TOTAL_STEPS}`}
+          {...swipeHint}
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+        >
           <div className={styles.dots}>
             {Array.from({ length: TOTAL_STEPS }, (_, i) => i + 1).map((n) => (
               <span
@@ -89,7 +132,7 @@ function OnboardingContent() {
                 <button
                   type="button"
                   className={`${styles.buttonPrimary} ds-label-large ds-focus-ring`}
-                  onClick={() => setStep(2)}
+                  onClick={goNextStep}
                 >
                   Continue
                 </button>
@@ -115,14 +158,14 @@ function OnboardingContent() {
                 <button
                   type="button"
                   className={`${styles.buttonSecondary} ds-label-large ds-focus-ring`}
-                  onClick={() => setStep(1)}
+                  onClick={goPreviousStep}
                 >
                   Back
                 </button>
                 <button
                   type="button"
                   className={`${styles.buttonPrimary} ds-label-large ds-focus-ring`}
-                  onClick={() => setStep(3)}
+                  onClick={goNextStep}
                 >
                   Continue
                 </button>
@@ -153,7 +196,7 @@ function OnboardingContent() {
                 <button
                   type="button"
                   className={`${styles.buttonSecondary} ds-label-large ds-focus-ring`}
-                  onClick={() => setStep(2)}
+                  onClick={goPreviousStep}
                 >
                   Back
                 </button>

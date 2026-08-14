@@ -41,12 +41,13 @@
 
 @media (max-width: 720px) {
   .main {
-    justify-content: flex-start;
+    justify-content: center;
     padding: var(--ds-spacing-md);
   }
 
   .card {
     max-width: 100%;
+    margin: auto 0;
     padding: var(--ds-spacing-lg);
   }
 
@@ -79,7 +80,7 @@
 
 @media (max-height: 760px) {
   .main {
-    justify-content: flex-start;
+    justify-content: center;
     padding-top: var(--ds-spacing-lg);
     padding-bottom: var(--ds-spacing-lg);
   }

@@ -28,12 +28,13 @@
   }
 
   .main {
-    align-items: flex-start;
+    align-items: center;
     padding: var(--ds-spacing-lg);
   }
 
   .card {
     max-width: 100%;
+    margin: auto 0;
     padding: var(--ds-spacing-lg);
   }
 
@@ -59,9 +60,24 @@
 
 @media (max-height: 760px) {
   .main {
-    align-items: flex-start;
+    align-items: center;
     padding-top: var(--ds-spacing-lg);
     padding-bottom: var(--ds-spacing-lg);
+  }
+}
+
+@media (max-width: 720px) {
+  .card {
+    touch-action: pan-y;
+  }
+
+  .card[data-swipe-hint="true"]::after {
+    content: "Swipe left or right to move between steps";
+    display: block;
+    width: 100%;
+    color: var(--color-roles-on-surface-variant);
+    font-size: 0.875rem;
+    margin-top: var(--ds-spacing-xs);
   }
 }
 
