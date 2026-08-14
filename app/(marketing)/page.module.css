@@ -13,6 +13,73 @@
   padding: var(--ds-spacing-base) var(--ds-spacing-xxl);
 }
 
+@media (max-width: 720px) {
+  .nav {
+    flex-wrap: wrap;
+    justify-content: center;
+    padding: var(--ds-spacing-base) var(--ds-spacing-lg);
+  }
+
+  .navLinks {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .main {
+    padding: var(--ds-spacing-lg);
+  }
+
+  .hero {
+    max-width: 100%;
+  }
+
+  .section {
+    max-width: 100%;
+  }
+
+  .contactCard {
+    padding: var(--ds-spacing-lg);
+  }
+}
+
+@media (max-width: 420px) {
+  .nav {
+    gap: var(--ds-spacing-sm);
+  }
+
+  .main {
+    padding: var(--ds-spacing-md);
+  }
+
+  .heroActions {
+    gap: var(--ds-spacing-sm);
+  }
+
+  .hero h1,
+  .section h2 {
+    text-wrap: balance;
+  }
+
+  .contactCard {
+    padding: var(--ds-spacing-md);
+  }
+
+  .field input,
+  .field textarea,
+  .buttonPrimary,
+  .buttonOutlined {
+    width: 100%;
+  }
+}
+
+@media (max-height: 760px) {
+  .main {
+    align-items: flex-start;
+    padding-top: var(--ds-spacing-lg);
+    padding-bottom: var(--ds-spacing-lg);
+  }
+}
+
 .navBrand {
   background: none;
   border: none;
@@ -361,5 +428,22 @@
 @media (max-width: 720px) {
   .testimonialGrid {
     grid-template-columns: 1fr;
+  }
+
+  .testimonialCard {
+    padding: var(--ds-spacing-md);
+  }
+
+  .heroActions {
+    width: 100%;
+  }
+
+  .contactCard {
+    width: 100%;
+  }
+
+  .modal-actions,
+  .contactCard button {
+    width: 100%;
   }
 }

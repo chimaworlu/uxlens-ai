@@ -13,6 +13,104 @@
   background-color: var(--color-roles-surface);
 }
 
+@media (max-width: 720px) {
+  .nav {
+    padding: var(--ds-spacing-base) var(--ds-spacing-lg);
+  }
+
+  .main {
+    padding: var(--ds-spacing-lg);
+  }
+
+  .content {
+    gap: var(--ds-spacing-lg);
+  }
+
+  .titleRow {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .titleRow .buttonPrimary {
+    width: 100%;
+  }
+
+  .bannerRow,
+  .bannerExpanded,
+  .bannerForm {
+    width: 100%;
+  }
+
+  .bannerRow {
+    align-items: flex-start;
+  }
+
+  .bannerAction,
+  .dismissButton {
+    align-self: flex-start;
+  }
+
+  .projectRow {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--ds-spacing-xs);
+  }
+
+  .modalOverlay {
+    padding: var(--ds-spacing-md);
+    align-items: flex-end;
+  }
+
+  .modal {
+    max-width: 100%;
+    padding: var(--ds-spacing-lg);
+  }
+
+  .modalActions {
+    flex-direction: column;
+  }
+
+  .modalActions .buttonPrimary,
+  .modalActions .buttonSecondary {
+    width: 100%;
+  }
+}
+
+@media (max-width: 420px) {
+  .main {
+    padding: var(--ds-spacing-md);
+  }
+
+  .nav {
+    padding: var(--ds-spacing-base) var(--ds-spacing-md);
+  }
+
+  .content {
+    gap: var(--ds-spacing-md);
+  }
+
+  .codeInput {
+    width: 100%;
+    letter-spacing: 2px;
+  }
+
+  .banner {
+    padding: var(--ds-spacing-sm) var(--ds-spacing-md);
+  }
+
+  .emptyState {
+    padding: var(--ds-spacing-xl) var(--ds-spacing-md);
+  }
+}
+
+@media (max-height: 760px) {
+  .main {
+    align-items: flex-start;
+    padding-top: var(--ds-spacing-lg);
+    padding-bottom: var(--ds-spacing-lg);
+  }
+}
+
 .brand {
   color: var(--color-roles-primary);
 }
