@@ -185,6 +185,7 @@
    row (icon, message, action, dismiss). Nothing here blocks the rest of
    the page — it's a dismissible nudge, not a gate. */
 .banner {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: var(--ds-spacing-md);
@@ -217,6 +218,9 @@
 }
 
 .dismissButton {
+  position: absolute;
+  top: var(--ds-spacing-sm);
+  right: var(--ds-spacing-sm);
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
@@ -236,6 +240,12 @@
 
   .dismissButton:hover {
     color: var(--color-roles-on-surface);
+  }
+}
+
+@media (max-width: 720px) {
+  .banner {
+    padding-top: calc(var(--ds-spacing-lg) + var(--ds-spacing-sm));
   }
 }
 

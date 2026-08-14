@@ -399,15 +399,16 @@ function VerifyEmailBanner({
             {sending ? "Sending…" : "Verify now"}
           </button>
         )}
-        <button
-          type="button"
-          onClick={() => setDismissed(true)}
-          aria-label="Dismiss"
-          className={`${styles.dismissButton} ds-focus-ring`}
-        >
-          <CloseIcon />
-        </button>
       </div>
+
+      <button
+        type="button"
+        onClick={() => setDismissed(true)}
+        aria-label="Dismiss verify email notice"
+        className={`${styles.dismissButton} ds-focus-ring`}
+      >
+        <CloseIcon />
+      </button>
 
       {expanded && (
         <div className={styles.bannerExpanded}>
