@@ -42,6 +42,10 @@
     flex-direction: column;
   }
 
+  .stepSkipButton {
+    align-self: flex-end;
+  }
+
   .buttonLink {
     align-self: center;
   }
@@ -178,6 +182,18 @@
   border-radius: var(--ds-radius-small);
   padding: var(--ds-spacing-sm) var(--ds-spacing-lg);
   transition: filter 0.15s ease;
+}
+
+.stepSkipButton {
+  position: absolute;
+  top: var(--ds-spacing-lg);
+  right: var(--ds-spacing-lg);
+  border: 1px solid var(--color-roles-surface-variant);
+  background-color: var(--color-roles-surface-container-lowest);
+  color: var(--color-roles-on-surface);
+  border-radius: var(--ds-radius-small);
+  padding: var(--ds-spacing-xs) var(--ds-spacing-md);
+  cursor: pointer;
 }
 
 .buttonLink {
