@@ -20,6 +20,11 @@
     padding: var(--ds-spacing-base) var(--ds-spacing-lg);
   }
 
+  .navBrand,
+  .hamburger {
+    flex: 0 0 auto;
+  }
+
   .navLinks {
     flex-wrap: wrap;
     justify-content: center;
@@ -37,6 +42,10 @@
     max-width: 100%;
   }
 
+  .testimonialGrid {
+    grid-template-columns: 1fr;
+  }
+
   .contactCard {
     padding: var(--ds-spacing-lg);
   }
@@ -44,6 +53,7 @@
 
 @media (max-width: 420px) {
   .nav {
+    align-items: center;
     gap: var(--ds-spacing-sm);
   }
 
@@ -62,6 +72,15 @@
 
   .contactCard {
     padding: var(--ds-spacing-md);
+  }
+
+  .navMenuOpen {
+    padding: var(--ds-spacing-xl) var(--ds-spacing-md);
+  }
+
+  .navMenuOpen .navLinks,
+  .navMenuOpen .buttonPrimary {
+    width: 100%;
   }
 
   .field input,

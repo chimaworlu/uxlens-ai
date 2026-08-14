@@ -16,6 +16,7 @@
 @media (max-width: 720px) {
   .nav {
     padding: var(--ds-spacing-base) var(--ds-spacing-lg);
+    gap: var(--ds-spacing-sm);
   }
 
   .main {
@@ -38,6 +39,15 @@
   .bannerRow,
   .bannerExpanded,
   .bannerForm {
+    width: 100%;
+  }
+
+  .bannerForm {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .codeInput {
     width: 100%;
   }
 
@@ -96,6 +106,16 @@
 
   .banner {
     padding: var(--ds-spacing-sm) var(--ds-spacing-md);
+  }
+
+  .bannerRow {
+    gap: var(--ds-spacing-xs);
+  }
+
+  .content,
+  .main,
+  .nav {
+    min-width: 0;
   }
 
   .emptyState {
