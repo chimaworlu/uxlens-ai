@@ -826,7 +826,7 @@ function PasswordField({
               className={`${styles.passwordRequirement} ds-label-small ${requirement.met ? styles.passwordRequirementMet : styles.passwordRequirementUnmet}`}
             >
               <span className={styles.passwordRequirementIcon} aria-hidden="true">
-                {requirement.met ? "✓" : "!"}
+                {requirement.met ? "✓" : "*"}
               </span>
               <span>{requirement.label}</span>
             </li>
