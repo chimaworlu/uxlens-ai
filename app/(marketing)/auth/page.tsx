@@ -775,17 +775,16 @@ function PasswordField({
   // disappearing only once every requirement is met at once.
   const unmetRequirements =
     showRequirements && value.length > 0 ? getUnmetPasswordRequirements(value) : [];
+  const metRequirements =
+    showRequirements && value.length > 0
+      ? getPasswordRequirements(value).filter((requirement) => requirement.met)
+      : [];
 
   return (
     <div className={styles.field}>
       <label htmlFor={id} className="ds-label-large">
         {label}
       </label>
-      {showRequirements && (
-        <p className={`${styles.helperText} ds-label-small`}>
-          Use at least 8 characters, with uppercase, lowercase, a number, and a special character.
-        </p>
-      )}
       <div className={styles.passwordInputWrap}>
         <input
           id={id}
@@ -819,17 +818,33 @@ function PasswordField({
           {errorMessage}
         </span>
       )}
-      {unmetRequirements.length > 0 && (
+      {showRequirements && value.length > 0 && (
         <ul id={requirementsId} className={styles.passwordRequirements} role="status">
-          {unmetRequirements.map((requirement) => (
-            <li key={requirement} className="ds-label-small">
-              {requirement}
+          {getPasswordRequirements(value).map((requirement) => (
+            <li
+              key={requirement.label}
+              className={`${styles.passwordRequirement} ds-label-small ${requirement.met ? styles.passwordRequirementMet : styles.passwordRequirementUnmet}`}
+            >
+              <span className={styles.passwordRequirementIcon} aria-hidden="true">
+                {requirement.met ? "✓" : "!"}
+              </span>
+              <span>{requirement.label}</span>
             </li>
           ))}
         </ul>
       )}
     </div>
   );
+}
+
+function getPasswordRequirements(value: string): { label: string; met: boolean }[] {
+  return [
+    { label: "Minimum of 8 characters", met: value.length >= 8 },
+    { label: "At least one lowercase letter", met: /[a-z]/.test(value) },
+    { label: "At least one uppercase letter", met: /[A-Z]/.test(value) },
+    { label: "At least one number", met: /[0-9]/.test(value) },
+    { label: "At least one special character (#@>^)", met: /[#@>^]/.test(value) },
+  ];
 }
 
 function GoogleButton() {
