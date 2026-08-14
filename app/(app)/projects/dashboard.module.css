@@ -374,6 +374,10 @@
   margin: 0;
 }
 
+.emptyStateHeading {
+  font-family: var(--font-inter), sans-serif;
+}
+
 .emptyState p {
   max-width: 440px;
   margin: 0;

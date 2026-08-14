@@ -127,7 +127,7 @@ function DashboardContent() {
               {projects.length === 0 ? (
                 <div className={styles.emptyState}>
                   <EmptyStateIcon />
-                  <h2 className="ds-title-large">No projects yet</h2>
+                  <h2 className={`${styles.emptyStateHeading} ds-title-large`}>No projects yet</h2>
                   <p className="ds-body-medium">
                     Create your first project to upload research documents and get
                     themed, cited findings back in minutes.
