@@ -108,6 +108,13 @@ function OnboardingContent() {
 
           {step === 1 && (
             <>
+              <button
+                type="button"
+                className={`${styles.stepSkipButton} ds-label-large ds-focus-ring`}
+                onClick={() => router.push(`/projects?email=${encodeURIComponent(email)}`)}
+              >
+                Skip for now
+              </button>
               <h1 className={`${styles.heading} ds-headline-small`}>
                 Welcome to UXLens AI
               </h1>
@@ -119,13 +126,6 @@ function OnboardingContent() {
                 trust what you&apos;re looking at.
               </p>
               <div className={styles.actions}>
-                <button
-                  type="button"
-                  className={`${styles.buttonSecondary} ds-label-large ds-focus-ring`}
-                  onClick={() => router.push(`/projects?email=${encodeURIComponent(email)}`)}
-                >
-                  Skip for now
-                </button>
                 <button
                   type="button"
                   className={`${styles.buttonPrimary} ds-label-large ds-focus-ring`}

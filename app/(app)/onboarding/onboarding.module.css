@@ -49,6 +49,10 @@
   .buttonLink {
     align-self: center;
   }
+
+  .buttonPrimary {
+    width: 100%;
+  }
 }
 
 @media (max-width: 420px) {
@@ -167,6 +171,7 @@
   width: 100%;
   display: flex;
   gap: var(--ds-spacing-sm);
+  flex-direction: column;
 }
 
 .buttonSecondary {
