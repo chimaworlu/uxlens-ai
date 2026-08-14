@@ -22,6 +22,49 @@
   padding: var(--ds-spacing-xxl);
 }
 
+@media (max-width: 720px) {
+  .nav {
+    padding: var(--ds-spacing-base) var(--ds-spacing-lg);
+  }
+
+  .main {
+    align-items: flex-start;
+    padding: var(--ds-spacing-lg);
+  }
+
+  .card {
+    max-width: 100%;
+    padding: var(--ds-spacing-lg);
+  }
+
+  .actions {
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 420px) {
+  .main {
+    padding: var(--ds-spacing-md);
+  }
+
+  .card {
+    padding: var(--ds-spacing-md);
+    gap: var(--ds-spacing-md);
+  }
+
+  .planRow {
+    gap: var(--ds-spacing-md);
+  }
+}
+
+@media (max-height: 760px) {
+  .main {
+    align-items: flex-start;
+    padding-top: var(--ds-spacing-lg);
+    padding-bottom: var(--ds-spacing-lg);
+  }
+}
+
 .card {
   width: 100%;
   max-width: 440px;
