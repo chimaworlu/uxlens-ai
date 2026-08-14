@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useMemo, useRef, useState, type TouchEvent } from "react";
+import { Suspense, useRef, useState, type TouchEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import styles from "./onboarding.module.css";
 
@@ -36,8 +36,6 @@ function OnboardingContent() {
   const [step, setStep] = useState(1);
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
-
-  const swipeHint = useMemo(() => ({ "data-swipe-hint": true }), []);
 
   function goNextStep() {
     setStep((current) => Math.min(current + 1, TOTAL_STEPS));
@@ -89,7 +87,6 @@ function OnboardingContent() {
         <div
           className={styles.card}
           aria-label={`Onboarding step ${step} of ${TOTAL_STEPS}`}
-          {...swipeHint}
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
         >

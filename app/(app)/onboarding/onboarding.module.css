@@ -70,15 +70,6 @@
   .card {
     touch-action: pan-y;
   }
-
-  .card[data-swipe-hint="true"]::after {
-    content: "Swipe left or right to move between steps";
-    display: block;
-    width: 100%;
-    color: var(--color-roles-on-surface-variant);
-    font-size: 0.875rem;
-    margin-top: var(--ds-spacing-xs);
-  }
 }
 
 .card {
