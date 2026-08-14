@@ -852,7 +852,6 @@ function GoogleButton() {
     <button
       type="button"
       className={`${styles.googleButton} ds-label-large ds-focus-ring`}
-      onClick={() => void signIn("google", { callbackUrl: "/projects" })}
     >
       <GoogleIcon />
       Continue with Google
