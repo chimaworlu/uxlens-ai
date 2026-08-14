@@ -199,17 +199,17 @@ function OnboardingContent() {
               <div className={styles.actions}>
                 <button
                   type="button"
-                  className={`${styles.buttonSecondary} ds-label-large ds-focus-ring`}
-                  onClick={goPreviousStep}
-                >
-                  Back
-                </button>
-                <button
-                  type="button"
                   className={`${styles.buttonPrimary} ds-label-large ds-focus-ring`}
                   onClick={goToDashboard}
                 >
                   Continue
+                </button>
+                <button
+                  type="button"
+                  className={`${styles.buttonLink} ds-label-medium ds-focus-ring`}
+                  onClick={goPreviousStep}
+                >
+                  Back
                 </button>
               </div>
             </>
