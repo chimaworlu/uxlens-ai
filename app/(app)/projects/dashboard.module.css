@@ -225,12 +225,18 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  width: 28px;
+  height: 28px;
   background: none;
   border: 1px solid transparent;
   border-radius: var(--ds-radius-small);
-  padding: var(--ds-spacing-xs);
+  padding: 0;
   cursor: pointer;
   color: var(--color-roles-on-surface-variant);
+}
+
+.dismissButton svg {
+  display: block;
 }
 
 @media (hover: hover) and (pointer: fine) {
