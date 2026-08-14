@@ -7,7 +7,9 @@ declare global {
 }
 
 function createPrismaClient() {
-  const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
+  // max: 10 — explicit pool size per server instance, rather than relying
+  // on node-postgres's implicit default of the same value.
+  const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL, max: 10 });
   return new PrismaClient({ adapter });
 }
 

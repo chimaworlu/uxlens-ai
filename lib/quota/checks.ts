@@ -10,6 +10,9 @@
 //   - FR-31 daily chat message cap (30 free / 500 pro)
 //   - FR-42 storage cap (100 MB free / 2 GB pro)
 
+import { prisma } from "@/lib/db/prisma";
+import type { PlanTier } from "@prisma/client";
+
 export class QuotaExceededError extends Error {
   constructor(
     message: string,
@@ -17,5 +20,30 @@ export class QuotaExceededError extends Error {
   ) {
     super(message);
     this.name = "QuotaExceededError";
+  }
+}
+
+// FR-7: 3 active (non-archived) projects on Free, 50 on Pro. Enforced here,
+// at creation time, before the Project row is written — never inline in
+// the route handler. Exported so UI code can display the limit (e.g. "0 of
+// 3 active projects used") without duplicating these numbers elsewhere.
+export const PROJECT_LIMITS: Record<PlanTier, number> = { FREE: 3, PRO: 50 };
+
+export async function checkProjectQuota(userId: string): Promise<void> {
+  const user = await prisma.user.findUniqueOrThrow({
+    where: { id: userId },
+    select: { plan: true },
+  });
+
+  const activeCount = await prisma.project.count({
+    where: { userId, archivedAt: null },
+  });
+
+  const limit = PROJECT_LIMITS[user.plan];
+  if (activeCount >= limit) {
+    throw new QuotaExceededError(
+      `You've reached your plan's limit of ${limit} active projects. Upgrade to Pro for more.`,
+      "projects"
+    );
   }
 }

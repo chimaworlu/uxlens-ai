@@ -2,15 +2,33 @@
 
 import { Suspense, useEffect, useState, type SubmitEvent } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { signIn } from "next-auth/react";
+import {
+  validateEmail,
+  validateFullName,
+  isPasswordValid,
+  getUnmetPasswordRequirements,
+} from "@/lib/validation/auth";
 import styles from "./auth.module.css";
 
-type View = "sign-in" | "sign-up" | "verify-email";
+type View =
+  | "sign-in"
+  | "sign-up"
+  | "reset-request"
+  | "reset-verify"
+  | "reset-new-password";
+
+const GOOGLE_SIGN_IN_AVAILABLE = Boolean(
+  process.env.NEXT_PUBLIC_GOOGLE_SIGN_IN_AVAILABLE === "true"
+);
 
 const TITLE_COPY: Record<View, string> = {
   "sign-in": "Sign in — UXLens AI",
   "sign-up": "Sign up — UXLens AI",
-  "verify-email": "Check your email — UXLens AI",
+  "reset-request": "Reset your password — UXLens AI",
+  "reset-verify": "Enter reset code — UXLens AI",
+  "reset-new-password": "Set a new password — UXLens AI",
 };
 
 export default function AuthPage() {
@@ -22,37 +40,76 @@ export default function AuthPage() {
 }
 
 function AuthPageContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const initialView: View =
     searchParams.get("view") === "sign-up" ? "sign-up" : "sign-in";
 
   const [view, setView] = useState<View>(initialView);
-  const [signUpEmail, setSignUpEmail] = useState("");
+  // Single source of truth for the email across every view in this flow —
+  // sign-in, sign-up, and all three reset steps all read from and write to
+  // this one value, so whatever's typed anywhere carries forward no matter
+  // which way the user navigates between them.
+  const [email, setEmail] = useState("");
+  const [resetCode, setResetCode] = useState("");
 
   useEffect(() => {
     document.title = TITLE_COPY[view];
   }, [view]);
 
-  function handleSignUpSuccess(email: string) {
-    setSignUpEmail(email);
-    setView("verify-email");
+  function handleSignUpSuccess() {
+    // No blocking verify-pending screen (FR-2: verification doesn't gate
+    // app use, only analysis) — straight through to onboarding, where the
+    // dashboard picks up the non-blocking verify banner instead.
+    router.push(`/onboarding?email=${encodeURIComponent(email)}`);
+  }
+
+  function handleResetVerifySuccess(code: string) {
+    setResetCode(code);
+    setView("reset-new-password");
   }
 
   return (
     <div className={styles.page}>
       <main className={styles.main}>
-        {view !== "verify-email" && <LogoLink />}
-        {view === "sign-in" && <SignInCard onSwitchToSignUp={() => setView("sign-up")} />}
+        <LogoLink />
+        {view === "sign-in" && (
+          <SignInCard
+            email={email}
+            onEmailChange={setEmail}
+            onSwitchToSignUp={() => setView("sign-up")}
+            onForgotPassword={() => setView("reset-request")}
+          />
+        )}
         {view === "sign-up" && (
           <SignUpCard
+            email={email}
+            onEmailChange={setEmail}
             onSwitchToSignIn={() => setView("sign-in")}
             onSuccess={handleSignUpSuccess}
           />
         )}
-        {view === "verify-email" && (
-          <VerifyEmailCard
-            email={signUpEmail}
-            onSignOut={() => setView("sign-in")}
+        {view === "reset-request" && (
+          <ResetRequestCard
+            email={email}
+            onEmailChange={setEmail}
+            onSwitchToSignIn={() => setView("sign-in")}
+            onSuccess={() => setView("reset-verify")}
+          />
+        )}
+        {view === "reset-verify" && (
+          <ResetVerifyCard
+            email={email}
+            onSwitchToSignIn={() => setView("sign-in")}
+            onSuccess={handleResetVerifySuccess}
+          />
+        )}
+        {view === "reset-new-password" && (
+          <ResetNewPasswordCard
+            email={email}
+            code={resetCode}
+            onSwitchToSignIn={() => setView("sign-in")}
+            onComplete={() => setView("sign-in")}
           />
         )}
       </main>
@@ -60,15 +117,49 @@ function AuthPageContent() {
   );
 }
 
-function SignInCard({ onSwitchToSignUp }: { onSwitchToSignUp: () => void }) {
-  const [email, setEmail] = useState("");
+function SignInCard({
+  email,
+  onEmailChange,
+  onSwitchToSignUp,
+  onForgotPassword,
+}: {
+  email: string;
+  onEmailChange: (value: string) => void;
+  onSwitchToSignUp: () => void;
+  onForgotPassword: () => void;
+}) {
+  const router = useRouter();
   const [password, setPassword] = useState("");
   const [submitAttempted, setSubmitAttempted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
-  function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
+  async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
     setSubmitAttempted(true);
+    setSubmitError(null);
     if (!email.trim() || !password.trim()) return;
+
+    setSubmitting(true);
+    try {
+      const result = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
+      });
+      if (result?.error) {
+        // Same generic message whether the email doesn't exist or the
+        // password is wrong — mirrors the anti-enumeration pattern used
+        // throughout the rest of this auth flow.
+        setSubmitError("Incorrect email or password.");
+        return;
+      }
+      router.push(`/projects?email=${encodeURIComponent(email)}`);
+    } catch {
+      setSubmitError("We could not sign you in right now. Check your connection and try again.");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -78,9 +169,15 @@ function SignInCard({ onSwitchToSignUp }: { onSwitchToSignUp: () => void }) {
         <p className={`${styles.subtitle} ds-body-medium`}>
           Sign in to continue to your research
         </p>
+        <p className={`${styles.modeLabel} ds-label-medium`}>Sign in</p>
       </div>
 
       <GoogleButton />
+      {!GOOGLE_SIGN_IN_AVAILABLE && (
+        <p className={`${styles.helperText} ds-label-small`}>
+          Google sign-in is not set up yet.
+        </p>
+      )}
       <Divider />
 
       <form className={styles.form} onSubmit={handleSubmit}>
@@ -89,8 +186,9 @@ function SignInCard({ onSwitchToSignUp }: { onSwitchToSignUp: () => void }) {
           label="Email"
           type="email"
           value={email}
-          onChange={setEmail}
+          onChange={onEmailChange}
           forceShowError={submitAttempted}
+          autoFocus
         />
 
         <PasswordField
@@ -101,18 +199,26 @@ function SignInCard({ onSwitchToSignUp }: { onSwitchToSignUp: () => void }) {
           forceShowError={submitAttempted}
         />
 
-        <Link
-          href="/password-reset"
+        <button
+          type="button"
+          onClick={onForgotPassword}
           className={`${styles.forgotLink} ds-label-medium ds-focus-ring`}
         >
           Forgot password?
-        </Link>
+        </button>
+
+        {submitError && (
+          <span className={`${styles.errorText} ds-label-medium`} role="alert">
+            {submitError}
+          </span>
+        )}
 
         <button
           type="submit"
+          disabled={submitting}
           className={`${styles.buttonPrimary} ds-label-large ds-focus-ring`}
         >
-          Sign in
+          {submitting ? "Signing in…" : "Sign in"}
         </button>
       </form>
 
@@ -131,28 +237,54 @@ function SignInCard({ onSwitchToSignUp }: { onSwitchToSignUp: () => void }) {
 }
 
 function SignUpCard({
+  email,
+  onEmailChange,
   onSwitchToSignIn,
   onSuccess,
 }: {
+  email: string;
+  onEmailChange: (value: string) => void;
   onSwitchToSignIn: () => void;
-  onSuccess: (email: string) => void;
+  onSuccess: () => void;
 }) {
   const [fullName, setFullName] = useState("");
-  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitAttempted, setSubmitAttempted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const isFormValid =
     !validateFullName(fullName) && !validateEmail(email) && isPasswordValid(password);
 
-  function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
+  async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
     setSubmitAttempted(true);
+    setSubmitError(null);
     if (!fullName.trim() || !email.trim() || !password.trim()) return;
     if (validateFullName(fullName)) return;
     if (validateEmail(email)) return;
     if (!isPasswordValid(password)) return;
-    onSuccess(email);
+
+    setSubmitting(true);
+    try {
+      const response = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fullName, email, password }),
+      });
+      const data: { error?: string } = await response.json();
+
+      if (!response.ok) {
+        setSubmitError(data.error ?? "Something went wrong. Please try again.");
+        return;
+      }
+
+      onSuccess();
+    } catch {
+      setSubmitError("We could not create your account right now. Check your connection and try again.");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -162,6 +294,7 @@ function SignUpCard({
         <p className={`${styles.subtitle} ds-body-medium`}>
           Start turning your research into trusted findings
         </p>
+        <p className={`${styles.modeLabel} ds-label-medium`}>Sign up</p>
       </div>
 
       <GoogleButton />
@@ -182,7 +315,7 @@ function SignUpCard({
           label="Email"
           type="email"
           value={email}
-          onChange={setEmail}
+          onChange={onEmailChange}
           forceShowError={submitAttempted}
           validate={validateEmail}
         />
@@ -196,12 +329,18 @@ function SignUpCard({
           showRequirements
         />
 
+        {submitError && (
+          <span className={`${styles.errorText} ds-label-medium`} role="alert">
+            {submitError}
+          </span>
+        )}
+
         <button
           type="submit"
-          disabled={!isFormValid}
+          disabled={!isFormValid || submitting}
           className={`${styles.buttonPrimary} ds-label-large ds-focus-ring`}
         >
-          Sign up
+          {submitting ? "Signing up…" : "Sign up"}
         </button>
       </form>
 
@@ -219,49 +358,327 @@ function SignUpCard({
   );
 }
 
-function VerifyEmailCard({
+function ResetRequestCard({
   email,
-  onSignOut,
+  onEmailChange,
+  onSwitchToSignIn,
+  onSuccess,
 }: {
   email: string;
-  onSignOut: () => void;
+  onEmailChange: (value: string) => void;
+  onSwitchToSignIn: () => void;
+  onSuccess: () => void;
 }) {
-  const displayEmail = email || "your email";
+  const [submitAttempted, setSubmitAttempted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  const isFormValid = !validateEmail(email);
+
+  async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSubmitAttempted(true);
+    setSubmitError(null);
+    if (validateEmail(email)) return;
+
+    setSubmitting(true);
+    try {
+      const response = await fetch("/api/auth/password-reset/request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      if (!response.ok) {
+        setSubmitError("Something went wrong. Please try again.");
+        return;
+      }
+      // Deliberately succeeds the same way whether or not an account
+      // exists for this email — the API never reveals that, so neither
+      // does this form.
+      onSuccess();
+    } catch {
+      setSubmitError("We could not send the reset code right now. Check your connection and try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   return (
     <div className={styles.card}>
-      <span className={styles.iconBadge}>
-        <MailIcon />
-      </span>
+      <div>
+        <h1 className={`${styles.heading} ds-headline-small`}>Reset your password</h1>
+        <p className={`${styles.subtitle} ds-body-medium`}>
+          Enter the email on your account and we&apos;ll send you a code to
+          reset your password.
+        </p>
+        <p className={`${styles.modeLabel} ds-label-medium`}>Reset step 1 of 3</p>
+      </div>
 
-      <h1 className={`${styles.heading} ds-headline-small`}>Check your email</h1>
+      <form className={styles.form} onSubmit={handleSubmit}>
+        <TextField
+          id="reset-request-email"
+          label="Email"
+          type="email"
+          value={email}
+          onChange={onEmailChange}
+          forceShowError={submitAttempted}
+        />
 
-      <p className="ds-body-large">
-        We&apos;ve sent a verification link to <strong>{displayEmail}</strong>.
-        Click the link to verify your account.
-      </p>
-      <p className="ds-body-large">
-        You can start uploading documents right away. You&apos;ll just need to
-        verify your email before running your first analysis.
-      </p>
+        {submitError && (
+          <span className={`${styles.errorText} ds-label-medium`} role="alert">
+            {submitError}
+          </span>
+        )}
 
-      <button
-        type="button"
-        className={`${styles.buttonOutlined} ds-label-large ds-focus-ring`}
-      >
-        Resend email
-      </button>
+        <button
+          type="submit"
+          disabled={!isFormValid || submitting}
+          className={`${styles.buttonPrimary} ds-label-large ds-focus-ring`}
+        >
+          {submitting ? "Sending…" : "Send password reset code"}
+        </button>
+      </form>
 
       <p className={`${styles.footerText} ds-body-small`}>
-        Wrong email?{" "}
+        Remember your password?{" "}
         <button
           type="button"
           className={`${styles.footerLink} ds-label-medium ds-focus-ring`}
-          onClick={onSignOut}
+          onClick={onSwitchToSignIn}
         >
-          Sign out
-        </button>{" "}
-        and try again.
+          Sign in
+        </button>
+      </p>
+    </div>
+  );
+}
+
+function ResetVerifyCard({
+  email,
+  onSwitchToSignIn,
+  onSuccess,
+}: {
+  email: string;
+  onSwitchToSignIn: () => void;
+  onSuccess: (code: string) => void;
+}) {
+  const [code, setCode] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [resendMessage, setResendMessage] = useState<string | null>(null);
+
+  async function handleVerify(event: SubmitEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError(null);
+    setSubmitting(true);
+    try {
+      const response = await fetch("/api/auth/password-reset/verify-code", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, code }),
+      });
+      const data: { error?: string } = await response.json();
+      if (!response.ok) {
+        setError(data.error ?? "Something went wrong. Please try again.");
+        return;
+      }
+      // This is a non-consuming peek, purely for this immediate feedback —
+      // the code is checked again, and actually spent, at the final
+      // confirm step. Carrying it forward in state, not re-asking for it.
+      onSuccess(code);
+    } catch {
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleResend() {
+    setError(null);
+    setResendMessage(null);
+    try {
+      const response = await fetch("/api/auth/password-reset/request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      if (!response.ok) {
+        setError("Could not resend the code.");
+        return;
+      }
+      setResendMessage("A new code has been sent.");
+    } catch {
+      setError("Could not resend the code.");
+    }
+  }
+
+  return (
+    <div className={styles.card}>
+      <div>
+        <h1 className={`${styles.heading} ds-headline-small`}>Enter your reset code</h1>
+        <p className={`${styles.subtitle} ds-body-medium`}>
+          We sent a 6-digit code to <strong>{email}</strong>.
+        </p>
+        <p className={`${styles.modeLabel} ds-label-medium`}>Reset step 2 of 3</p>
+      </div>
+
+      <form className={styles.form} onSubmit={handleVerify}>
+        <div className={styles.field}>
+          <label htmlFor="reset-code" className="ds-label-large">
+            Reset code
+          </label>
+          <input
+            id="reset-code"
+            name="code"
+            type="text"
+            inputMode="numeric"
+            maxLength={6}
+            placeholder="000000"
+            value={code}
+            onChange={(event) => setCode(event.target.value.replace(/\D/g, ""))}
+            className={`${styles.codeInput} ds-focus-ring`}
+          />
+        </div>
+
+        {error && (
+          <span className={`${styles.errorText} ds-label-medium`} role="alert">
+            {error}
+          </span>
+        )}
+
+        <button
+          type="submit"
+          disabled={code.length !== 6 || submitting}
+          className={`${styles.buttonPrimary} ds-label-large ds-focus-ring`}
+        >
+          {submitting ? "Verifying…" : "Verify code"}
+        </button>
+      </form>
+
+      <p className={`${styles.footerText} ds-body-small`}>
+        <button
+          type="button"
+          onClick={handleResend}
+          className={`${styles.footerLink} ds-label-medium ds-focus-ring`}
+        >
+          Resend code
+        </button>
+        {resendMessage && <> · {resendMessage}</>}
+      </p>
+
+      <p className={`${styles.footerText} ds-body-small`}>
+        Remember your password?{" "}
+        <button
+          type="button"
+          className={`${styles.footerLink} ds-label-medium ds-focus-ring`}
+          onClick={onSwitchToSignIn}
+        >
+          Log in
+        </button>
+      </p>
+    </div>
+  );
+}
+
+function ResetNewPasswordCard({
+  email,
+  code,
+  onSwitchToSignIn,
+  onComplete,
+}: {
+  email: string;
+  code: string;
+  onSwitchToSignIn: () => void;
+  onComplete: () => void;
+}) {
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [submitAttempted, setSubmitAttempted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  const isFormValid =
+    isPasswordValid(newPassword) && confirmPassword !== "" && confirmPassword === newPassword;
+
+  async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSubmitAttempted(true);
+    setSubmitError(null);
+    if (!isPasswordValid(newPassword)) return;
+    if (confirmPassword !== newPassword) return;
+
+    setSubmitting(true);
+    try {
+      const response = await fetch("/api/auth/password-reset/confirm", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, code, newPassword }),
+      });
+      const data: { error?: string } = await response.json();
+      if (!response.ok) {
+        setSubmitError(data.error ?? "Something went wrong. Please try again.");
+        return;
+      }
+      onComplete();
+    } catch {
+      setSubmitError("We could not reset your password right now. Check your connection and try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <div className={styles.card}>
+      <div>
+        <h1 className={`${styles.heading} ds-headline-small`}>Set a new password</h1>
+        <p className={`${styles.subtitle} ds-body-medium`}>
+          Choose a new password for your account.
+        </p>
+        <p className={`${styles.modeLabel} ds-label-medium`}>Reset step 3 of 3</p>
+      </div>
+
+      <form className={styles.form} onSubmit={handleSubmit}>
+        <PasswordField
+          id="reset-new-password"
+          label="New password"
+          value={newPassword}
+          onChange={setNewPassword}
+          forceShowError={submitAttempted}
+          showRequirements
+        />
+
+        <PasswordField
+          id="reset-confirm-password"
+          label="Confirm new password"
+          value={confirmPassword}
+          onChange={setConfirmPassword}
+          forceShowError={submitAttempted}
+          validate={(v) => (v === newPassword ? null : "Passwords Must Match")}
+        />
+
+        {submitError && (
+          <span className={`${styles.errorText} ds-label-medium`} role="alert">
+            {submitError}
+          </span>
+        )}
+
+        <button
+          type="submit"
+          disabled={!isFormValid || submitting}
+          className={`${styles.buttonPrimary} ds-label-large ds-focus-ring`}
+        >
+          {submitting ? "Resetting…" : "Reset password"}
+        </button>
+      </form>
+
+      <p className={`${styles.footerText} ds-body-small`}>
+        <button
+          type="button"
+          className={`${styles.footerLink} ds-label-medium ds-focus-ring`}
+          onClick={onSwitchToSignIn}
+        >
+          Back to sign in
+        </button>
       </p>
     </div>
   );
@@ -275,6 +692,7 @@ function TextField({
   onChange,
   forceShowError,
   validate,
+  autoFocus = false,
 }: {
   id: string;
   label: string;
@@ -287,6 +705,7 @@ function TextField({
      Only called once the field is non-empty, so it never fights with the
      empty-field message. */
   validate?: (value: string) => string | null;
+  autoFocus?: boolean;
 }) {
   const [touched, setTouched] = useState(false);
   const isEmpty = value.trim() === "";
@@ -314,6 +733,7 @@ function TextField({
         }}
         aria-invalid={Boolean(errorMessage)}
         aria-describedby={errorMessage ? errorId : undefined}
+        autoFocus={autoFocus}
         className="ds-focus-ring"
       />
       {errorMessage && (
@@ -329,55 +749,6 @@ function trimTrailingSpaces(value: string): string {
   return value.replace(/\s+$/, "");
 }
 
-function validateEmail(value: string): string | null {
-  // Deliberately lenient, not full RFC validation: just needs *something*
-  // before the @ and *something* after it. The error clears the instant a
-  // domain starts (e.g. "jane@g"), it doesn't wait for a complete domain
-  // or TLD like ".com" — matches "stop displaying the moment a domain is
-  // typed after @", not "wait until the whole address is valid".
-  const atIndex = value.indexOf("@");
-  const hasLocalPart = atIndex > 0;
-  const hasDomainStart = atIndex !== -1 && atIndex < value.length - 1;
-  return hasLocalPart && hasDomainStart ? null : "Enter A Valid Email Address";
-}
-
-function validateFullName(value: string): string | null {
-  // Letters and spaces only — spaces are allowed despite "only letters"
-  // because a full name needs to fit more than one word (e.g. "Jane Doe").
-  // Hyphens/apostrophes ("Mary-Jane", "O'Brien") are not currently
-  // allowed; say if those should be permitted too.
-  if (!/^[A-Za-z\s]+$/.test(value)) {
-    return "Full Name Must Use Only Letters";
-  }
-
-  // At least a first and last word. filter(Boolean) collapses repeated/
-  // trailing spaces so "Jane   " or "Jane  Doe" aren't miscounted. No
-  // upper limit — a 3rd, 4th, or 5th word (middle names, compound
-  // surnames) is just accepted as part of the same free-text value, same
-  // as the schema stores it.
-  const words = value.trim().split(/\s+/).filter(Boolean);
-  if (words.length < 2) {
-    return "Full Name Must Have At Least 2 Words";
-  }
-
-  return null;
-}
-
-const PASSWORD_REQUIREMENTS: { test: (value: string) => boolean; label: string }[] = [
-  { test: (v) => v.length >= 8, label: "Minimum Of 8 Characters" },
-  { test: (v) => /[a-z]/.test(v), label: "Password must contain a lowercase letter" },
-  { test: (v) => /[A-Z]/.test(v), label: "Password must contain an uppercase letter" },
-  { test: (v) => /[0-9]/.test(v), label: "Password must contain a number" },
-  { test: (v) => /[#@>^]/.test(v), label: "Password must contain a special character(#@>^)" },
-];
-
-function getUnmetPasswordRequirements(value: string): string[] {
-  return PASSWORD_REQUIREMENTS.filter((r) => !r.test(value)).map((r) => r.label);
-}
-
-function isPasswordValid(value: string): boolean {
-  return getUnmetPasswordRequirements(value).length === 0;
-}
 
 function PasswordField({
   id,
@@ -386,6 +757,7 @@ function PasswordField({
   onChange,
   forceShowError,
   showRequirements = false,
+  validate,
 }: {
   id: string;
   label: string;
@@ -393,10 +765,16 @@ function PasswordField({
   onChange: (value: string) => void;
   forceShowError: boolean;
   showRequirements?: boolean;
+  // Same real-time contract as TextField's validate prop: runs on every
+  // keystroke once non-empty, independent of touched/forceShowError.
+  validate?: (value: string) => string | null;
 }) {
   const [visible, setVisible] = useState(false);
   const [touched, setTouched] = useState(false);
-  const showError = (touched || forceShowError) && value.trim() === "";
+  const isEmpty = value.trim() === "";
+  const emptyError = (touched || forceShowError) && isEmpty;
+  const formatError = !isEmpty && validate ? validate(value) : null;
+  const errorMessage = emptyError ? `${label} field Cannot Be Empty` : formatError;
   const errorId = `${id}-error`;
   const requirementsId = `${id}-requirements`;
 
@@ -412,6 +790,11 @@ function PasswordField({
       <label htmlFor={id} className="ds-label-large">
         {label}
       </label>
+      {showRequirements && (
+        <p className={`${styles.helperText} ds-label-small`}>
+          Use at least 8 characters, with uppercase, lowercase, a number, and a special character.
+        </p>
+      )}
       <div className={styles.passwordInputWrap}>
         <input
           id={id}
@@ -420,27 +803,29 @@ function PasswordField({
           value={value}
           onChange={(event) => onChange(event.target.value)}
           onBlur={() => setTouched(true)}
-          aria-invalid={showError}
+          aria-invalid={Boolean(errorMessage)}
           aria-describedby={
-            [showError ? errorId : null, unmetRequirements.length ? requirementsId : null]
+            [errorMessage ? errorId : null, unmetRequirements.length ? requirementsId : null]
               .filter(Boolean)
               .join(" ") || undefined
           }
           className="ds-focus-ring"
         />
-        <button
-          type="button"
-          className={`${styles.passwordToggle} ds-focus-ring`}
-          aria-label={visible ? "Hide password" : "Show password"}
-          aria-pressed={visible}
-          onClick={() => setVisible((v) => !v)}
-        >
-          <EyeIcon open={visible} />
-        </button>
+        {value.length > 0 && (
+          <button
+            type="button"
+            className={`${styles.passwordToggle} ds-focus-ring`}
+            aria-label={visible ? "Hide password" : "Show password"}
+            aria-pressed={visible}
+            onClick={() => setVisible((v) => !v)}
+          >
+            <EyeIcon open={visible} />
+          </button>
+        )}
       </div>
-      {showError && (
+      {errorMessage && (
         <span id={errorId} className={`${styles.errorText} ds-label-medium`} role="alert">
-          {label} field Cannot Be Empty
+          {errorMessage}
         </span>
       )}
       {unmetRequirements.length > 0 && (
@@ -457,10 +842,26 @@ function PasswordField({
 }
 
 function GoogleButton() {
+  if (!GOOGLE_SIGN_IN_AVAILABLE) {
+    return (
+      <button
+        type="button"
+        className={`${styles.googleButton} ds-label-large ds-focus-ring`}
+        disabled
+        aria-disabled="true"
+        title="Google sign-in is not set up yet"
+      >
+        <GoogleIcon />
+        Continue with Google
+      </button>
+    );
+  }
+
   return (
     <button
       type="button"
       className={`${styles.googleButton} ds-label-large ds-focus-ring`}
+      onClick={() => void signIn("google", { callbackUrl: "/projects" })}
     >
       <GoogleIcon />
       Continue with Google
@@ -503,15 +904,6 @@ function GoogleIcon() {
         fill="#EA4335"
         d="M9 3.58c1.32 0 2.51.46 3.44 1.35l2.58-2.58C13.46.89 11.43 0 9 0A9 9 0 0 0 .98 4.97l2.97 2.33C4.66 5.17 6.65 3.58 9 3.58z"
       />
-    </svg>
-  );
-}
-
-function MailIcon() {
-  return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <rect x="3" y="5" width="18" height="14" rx="2" stroke="currentColor" strokeWidth="1.6" />
-      <path d="M3 7l9 6 9-6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }

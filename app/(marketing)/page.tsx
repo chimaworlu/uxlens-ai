@@ -13,11 +13,10 @@ const TITLE_COPY: Record<Section, string> = {
 };
 
 const FOOTER_COPY: Record<Section, string> = {
-  home: "UXLens AI · Built for product designers",
+  home: "UXLens AI · Built for researches",
   testimonial:
     "UXLens AI helps solo researchers uncover the insights that drive real business growth.",
-  contact:
-    "UXLens AI · Built for product designers and research teams. All rights reserved.",
+  contact: "UXLens AI · Built for researches",
 };
 
 const TESTIMONIALS = [

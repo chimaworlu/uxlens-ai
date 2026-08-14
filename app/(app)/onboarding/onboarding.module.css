@@ -1,0 +1,118 @@
+.page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--color-roles-surface-container-low);
+}
+
+.nav {
+  padding: var(--ds-spacing-base) var(--ds-spacing-xxl);
+  background-color: var(--color-roles-surface);
+}
+
+.brand {
+  color: var(--color-roles-primary);
+}
+
+.main {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--ds-spacing-xxl);
+}
+
+.card {
+  width: 100%;
+  max-width: 440px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--ds-spacing-lg);
+  background-color: var(--color-roles-surface-container-lowest);
+  border-radius: var(--ds-radius-large);
+  box-shadow: var(--effect-button-shadow-soft);
+  padding: var(--ds-spacing-xxl);
+  text-align: center;
+}
+
+.dots {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-spacing-xs);
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--ds-radius-full);
+  background-color: var(--color-roles-surface-variant);
+}
+
+.dotActive {
+  background-color: var(--color-roles-primary);
+}
+
+.stepLabel {
+  color: var(--color-roles-on-surface-variant);
+  margin-top: calc(-1 * var(--ds-spacing-sm));
+}
+
+.iconBadge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--ds-radius-full);
+  background-color: var(--color-roles-secondary-container);
+  color: var(--color-roles-on-secondary-container);
+}
+
+.heading {
+  color: var(--color-roles-on-surface);
+}
+
+.body {
+  color: var(--color-roles-on-surface-variant);
+}
+
+.planTable {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-spacing-sm);
+  text-align: left;
+}
+
+.planRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--color-roles-on-surface);
+}
+
+.planRow span:last-child {
+  font-weight: 500;
+}
+
+.buttonPrimary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  border: 1px solid transparent;
+  cursor: pointer;
+  font-weight: 400;
+  background-color: var(--color-roles-primary);
+  color: var(--color-roles-on-primary);
+  border-radius: var(--ds-radius-small);
+  padding: var(--ds-spacing-sm) var(--ds-spacing-lg);
+  transition: filter 0.15s ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .buttonPrimary:hover {
+    filter: brightness(0.92);
+  }
+}

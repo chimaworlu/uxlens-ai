@@ -33,7 +33,7 @@ These choices are already made. You do not evaluate alternatives, propose swaps,
 **Services**
 - Flutterwave is the only payment provider. NGN is the only currency. Do not add Stripe, Paystack, or any USD price — that is explicitly out of scope (NG-7) until Phase 3, and only then if a documented trigger in the PRD is hit.
 - Auth.js (NextAuth v5) with the Prisma adapter is the only auth system. Do not hand-roll session handling.
-- Resend is the only transactional email provider.
+- Nodemailer (Gmail SMTP) is the only transactional email provider.
 - Sentry for error tracking, pino for structured logs. Do not add a second logging library.
 
 **AI providers**
@@ -145,7 +145,7 @@ Every rule below is a hard boundary. **Breaking any rule on this list means the 
   /billing
     flutterwave.ts
   /email
-    resend.ts
+    nodemailer.ts
   /storage
     r2.ts                      # presign, object key builder
   /db

@@ -1,0 +1,157 @@
+"use client";
+
+import { Suspense, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import styles from "./onboarding.module.css";
+
+const TOTAL_STEPS = 3;
+
+const PLAN_LIMITS: { label: string; value: string }[] = [
+  { label: "Active projects", value: "3" },
+  { label: "Documents per project", value: "10" },
+  { label: "Storage per project", value: "100 MB" },
+  { label: "Analysis runs per month", value: "3" },
+  { label: "Chat messages per day", value: "30" },
+];
+
+export default function OnboardingPage() {
+  return (
+    <Suspense fallback={null}>
+      <OnboardingContent />
+    </Suspense>
+  );
+}
+
+function OnboardingContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const email = searchParams.get("email") ?? "";
+
+  const [step, setStep] = useState(1);
+
+  function goToDashboard() {
+    // No real session yet (see AGENTS.md gap flagged in conversation) —
+    // carrying the email through as a query param is a placeholder stand-in
+    // for a real logged-in session, not a security boundary.
+    router.push(`/projects?email=${encodeURIComponent(email)}`);
+  }
+
+  return (
+    <div className={styles.page}>
+      <nav className={styles.nav}>
+        <span className={`${styles.brand} ds-title-large`}>UXLens AI</span>
+      </nav>
+
+      <main className={styles.main}>
+        <div className={styles.card}>
+          <div className={styles.dots}>
+            {Array.from({ length: TOTAL_STEPS }, (_, i) => i + 1).map((n) => (
+              <span
+                key={n}
+                className={`${styles.dot} ${n === step ? styles.dotActive : ""}`}
+              />
+            ))}
+          </div>
+          <span className={`${styles.stepLabel} ds-label-medium`}>
+            Step {step} of {TOTAL_STEPS}
+          </span>
+
+          {step === 1 && (
+            <>
+              <h1 className={`${styles.heading} ds-headline-small`}>
+                Welcome to UXLens AI
+              </h1>
+              <p className={`${styles.body} ds-body-large`}>
+                Upload your interview notes, survey results, and customer
+                feedback. UXLens reads through your documents and returns
+                organized themes, key pain points, and suggestions, each one
+                linked back to the exact sentence it came from, so you can
+                trust what you&apos;re looking at.
+              </p>
+              <button
+                type="button"
+                className={`${styles.buttonPrimary} ds-label-large ds-focus-ring`}
+                onClick={() => setStep(2)}
+              >
+                Continue
+              </button>
+            </>
+          )}
+
+          {step === 2 && (
+            <>
+              <span className={styles.iconBadge}>
+                <ShieldIcon />
+              </span>
+              <h1 className={`${styles.heading} ds-headline-small`}>
+                A quick note about privacy
+              </h1>
+              <p className={`${styles.body} ds-body-large`}>
+                Research documents often contain personal data about
+                participants. Remove names and identifying details you do not
+                need. Files are stored privately and never used to train AI
+                models.
+              </p>
+              <button
+                type="button"
+                className={`${styles.buttonPrimary} ds-label-large ds-focus-ring`}
+                onClick={() => setStep(3)}
+              >
+                Continue
+              </button>
+            </>
+          )}
+
+          {step === 3 && (
+            <>
+              <h1 className={`${styles.heading} ds-headline-small`}>
+                You&apos;re on the Free plan
+              </h1>
+              <p className={`${styles.body} ds-body-medium`}>
+                Here&apos;s what&apos;s included to get started.
+              </p>
+              <div className={styles.planTable}>
+                {PLAN_LIMITS.map((row) => (
+                  <div key={row.label} className={`${styles.planRow} ds-body-medium`}>
+                    <span>{row.label}</span>
+                    <span>{row.value}</span>
+                  </div>
+                ))}
+              </div>
+              <p className={`${styles.body} ds-label-small`}>
+                You can upgrade to Pro anytime for higher limits.
+              </p>
+              <button
+                type="button"
+                className={`${styles.buttonPrimary} ds-label-large ds-focus-ring`}
+                onClick={goToDashboard}
+              >
+                Continue
+              </button>
+            </>
+          )}
+        </div>
+      </main>
+    </div>
+  );
+}
+
+function ShieldIcon() {
+  return (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M12 3l7 3v5c0 4.5-3 8-7 9-4-1-7-4.5-7-9V6l7-3z"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M9 12l2 2 4-4"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
