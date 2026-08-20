@@ -1,5 +1,10 @@
 .page {
-  min-height: 100vh;
+  /* dvh, not vh: on a mobile browser, 100vh is measured against the
+     largest possible viewport (address bar collapsed), taller than what's
+     actually on screen when the bar is showing — which pushes anything
+     centered below it lower than true visual center. dvh tracks the real,
+     current viewport instead. */
+  min-height: 100dvh;
   display: flex;
   flex-direction: column;
   background-color: var(--color-roles-surface);
@@ -36,34 +41,13 @@
     width: 100%;
   }
 
-  .bannerRow,
-  .bannerExpanded,
-  .bannerForm {
-    width: 100%;
-  }
-
-  .bannerForm {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .codeInput {
-    width: 100%;
-  }
-
-  .bannerRow {
-    align-items: flex-start;
-  }
-
-  .bannerAction,
-  .dismissButton {
-    align-self: flex-start;
-  }
-
-  .projectRow {
+  .bannerHeaderRow {
     flex-direction: column;
     align-items: flex-start;
-    gap: var(--ds-spacing-xs);
+  }
+
+  .verifyButton {
+    width: 100%;
   }
 
   .modalOverlay {
@@ -99,17 +83,19 @@
     gap: var(--ds-spacing-md);
   }
 
-  .codeInput {
-    width: 100%;
-    letter-spacing: 2px;
+  .otpBox {
+    max-width: 40px;
+    font-size: 1.1rem;
   }
 
   .banner {
     padding: var(--ds-spacing-sm) var(--ds-spacing-md);
+    padding-right: 56px;
   }
 
-  .bannerRow {
-    gap: var(--ds-spacing-xs);
+  .dismissButton {
+    top: var(--ds-spacing-sm);
+    right: var(--ds-spacing-md);
   }
 
   .content,
@@ -125,7 +111,6 @@
 
 @media (max-height: 760px) {
   .main {
-    align-items: flex-start;
     padding-top: var(--ds-spacing-lg);
     padding-bottom: var(--ds-spacing-lg);
   }
@@ -157,6 +142,14 @@
 }
 
 .content {
+  /* flex: 1, not just natural content height: the title row needs to stay
+     pinned at the top while the empty state (below) centers itself in
+     whatever space is left — that only works if .content actually fills
+     .main's full height for there to be leftover space to center within.
+     min-height: 0 is the usual flex:1-inside-flex:1 companion, letting
+     this shrink instead of overflowing on a short viewport. */
+  flex: 1;
+  min-height: 0;
   width: 100%;
   max-width: 880px;
   display: flex;
@@ -180,44 +173,93 @@
   color: var(--color-roles-on-surface-variant);
 }
 
-/* ---------- verify banner ----------
-   Slim bar, not a big colored block: subtle tint + hairline border, one
-   row (icon, message, action, dismiss). Nothing here blocks the rest of
-   the page — it's a dismissible nudge, not a gate. */
+/* ---------- verify banner ---------- Notification-card pattern, never a
+   blocking gate — dismissible at every stage. */
 .banner {
-  display: flex;
-  flex-direction: column;
-  gap: var(--ds-spacing-md);
+  position: relative;
   background-color: var(--color-roles-surface-container-low);
   border: var(--ds-hairline-border);
   border-radius: var(--ds-radius-medium);
-  padding: var(--ds-spacing-md) var(--ds-spacing-lg);
+  padding: var(--ds-spacing-lg);
+  /* Reserves room for the absolutely-positioned dismiss button (offset
+     right: var(--ds-spacing-lg), width 28px) so it never overlaps the
+     heading or Verify button next to it. */
+  padding-right: 64px;
 }
 
 .bannerRow {
   display: flex;
-  align-items: center;
-  gap: var(--ds-spacing-sm);
-  color: var(--color-roles-primary);
+  align-items: flex-start;
+  gap: var(--ds-spacing-md);
 }
 
-.bannerText {
+.iconBadge {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--ds-radius-full);
+  background-color: var(--color-roles-primary-container);
+  color: var(--color-roles-on-primary-container);
+}
+
+.bannerBody {
   flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-spacing-md);
+}
+
+.bannerHeaderRow {
+  display: flex;
+  /* flex-start, not center: Verify's top edge should line up with the
+     heading's top edge (and, in turn, with the dismiss button's fixed top
+     offset below) — centering against the full two-line heading+subtext
+     block would put it lower than a top-anchored dismiss button. */
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--ds-spacing-md);
+  flex-wrap: wrap;
+}
+
+.bannerHeading {
   margin: 0;
   color: var(--color-roles-on-surface);
 }
 
-.bannerAction {
-  flex-shrink: 0;
-  background: none;
-  border: none;
-  padding: var(--ds-spacing-xs) var(--ds-spacing-sm);
-  cursor: pointer;
-  color: var(--color-roles-primary);
+.bannerSubtext {
+  margin: 0;
+  color: var(--color-roles-on-surface-variant);
 }
 
-.dismissButton {
+.verifyButton {
   flex-shrink: 0;
+  background: none;
+  cursor: pointer;
+  border: 1.5px solid var(--color-roles-primary);
+  color: var(--color-roles-primary);
+  border-radius: var(--ds-radius-medium);
+  padding: var(--ds-spacing-xs) var(--ds-spacing-lg);
+}
+
+.verifyButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Pinned to the card's corner rather than laid out alongside the heading/
+   Verify button: those wrap onto their own line at narrow widths (see the
+   mobile breakpoint below), and a flex sibling in that row would wrap —
+   and visually drift — right along with them. The fixed top/right offset
+   here matches .banner's own padding exactly, so it lines up with where
+   the heading row actually starts. */
+.dismissButton {
+  position: absolute;
+  top: var(--ds-spacing-lg);
+  right: var(--ds-spacing-lg);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -229,7 +271,6 @@
   padding: 0;
   cursor: pointer;
   color: var(--color-roles-on-surface-variant);
-  margin-left: auto;
 }
 
 .dismissButton svg {
@@ -237,8 +278,8 @@
 }
 
 @media (hover: hover) and (pointer: fine) {
-  .bannerAction:hover {
-    text-decoration: underline;
+  .verifyButton:hover:not(:disabled) {
+    background-color: var(--color-roles-primary-container);
   }
 
   .dismissButton:hover {
@@ -246,30 +287,54 @@
   }
 }
 
-.bannerExpanded {
+.otpSection {
   display: flex;
   flex-direction: column;
+  align-items: flex-start;
   gap: var(--ds-spacing-sm);
-  padding-top: var(--ds-spacing-sm);
-  border-top: var(--ds-hairline-border);
 }
 
-.bannerForm {
+/* Six individual boxes, not one wide letter-spaced field — the standard
+   OTP pattern modern apps use, and one that never has an oversized empty
+   field stretching awkwardly on narrow screens. */
+.otpInput {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--ds-spacing-sm);
+  gap: var(--ds-spacing-xs);
 }
 
-.codeInput {
+/* flex: 1 1 0 + min-width: 0, not a fixed width: text inputs have a
+   browser-default intrinsic minimum size that a fixed width doesn't
+   override under flex-shrink, so on a narrow card the focused box (which
+   needs room for a blinking cursor) would refuse to shrink while the
+   other five collapsed to near-nothing beside it. Equal flex-basis with
+   min-width explicitly zeroed forces all six to stay genuinely equal
+   width no matter how little room is available; max-width just caps how
+   big they get on a roomy desktop banner. aspect-ratio keeps them square
+   at whatever width that resolves to, instead of a fixed height that'd
+   look like a tall sliver once width drops below it. */
+.otpBox {
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 48px;
+  aspect-ratio: 1 / 1;
+  text-align: center;
   font: inherit;
-  width: 140px;
-  letter-spacing: 4px;
+  font-size: 1.25rem;
+  font-weight: 600;
   color: var(--color-roles-on-surface);
   background-color: var(--color-roles-surface-container-lowest);
   border: var(--ds-hairline-border);
-  border-radius: var(--ds-radius-small);
-  padding: var(--ds-spacing-sm) var(--ds-spacing-md);
+  border-radius: var(--ds-radius-medium);
+  padding: 0;
+}
+
+.otpBox:focus {
+  border-color: var(--color-roles-primary);
+}
+
+.otpSection .resendLink {
+  align-self: flex-start;
+  color: var(--color-roles-primary);
 }
 
 .buttonPrimary {
@@ -282,7 +347,7 @@
   font-weight: 400;
   background-color: var(--color-roles-primary);
   color: var(--color-roles-on-primary);
-  border-radius: var(--ds-radius-small);
+  border-radius: var(--ds-radius-medium);
   padding: var(--ds-spacing-sm) var(--ds-spacing-lg);
   transition: filter 0.15s ease;
 }
@@ -322,7 +387,7 @@
 .snackbar {
   position: fixed;
   left: 50%;
-  bottom: var(--ds-spacing-lg);
+  top: var(--ds-spacing-lg);
   transform: translateX(-50%);
   display: inline-flex;
   align-items: center;
@@ -354,7 +419,33 @@
   cursor: pointer;
 }
 
+/* Fills the space below the title row; .bannerOverlay (if present) floats
+   on top of this rather than sitting in its normal flow, so .emptyState's
+   centering below is always computed against this container's full
+   height — never shifted by whether the banner happens to be showing. */
+.contentBody {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.bannerOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1;
+}
+
 .emptyState {
+  /* Centers itself in whatever vertical space .contentBody has —
+     margin: auto on a flex item absorbs all available free space evenly
+     above and below it, rather than the block sitting flush under the
+     title. */
+  margin-top: auto;
+  margin-bottom: auto;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -392,7 +483,7 @@
   font-weight: 400;
   background-color: transparent;
   color: var(--color-roles-on-surface);
-  border-radius: var(--ds-radius-small);
+  border-radius: var(--ds-radius-medium);
   padding: var(--ds-spacing-sm) var(--ds-spacing-lg);
   transition: background-color 0.15s ease;
 }
@@ -455,26 +546,246 @@
   gap: var(--ds-spacing-sm);
 }
 
-.projectList {
-  display: flex;
-  flex-direction: column;
-  gap: var(--ds-spacing-sm);
+/* ---------- nav actions ---------- */
+.avatarLink {
+  display: inline-flex;
+  border-radius: 50%;
+  text-decoration: none;
+}
+
+/* ---------- project card grid ---------- */
+.projectGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--ds-spacing-lg);
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.projectRow {
+.projectCard {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  color: var(--color-roles-on-surface);
+  flex-direction: column;
+  gap: var(--ds-spacing-sm);
   background-color: var(--color-roles-surface-container-lowest);
   border: var(--ds-hairline-border);
   border-radius: var(--ds-radius-medium);
-  padding: var(--ds-spacing-md) var(--ds-spacing-lg);
+  padding: var(--ds-spacing-lg);
 }
 
-.projectDate {
+/* Wraps everything except the header row (badge + kebab menu) so the card
+   opens the project on click without nesting the kebab's interactive
+   button/menu inside an anchor. */
+.cardLink {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-spacing-sm);
+  color: inherit;
+  text-decoration: none;
+}
+
+.cardHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--ds-spacing-sm);
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-spacing-xs);
+  border-radius: var(--ds-radius-full);
+  padding: 2px var(--ds-spacing-sm);
+}
+
+.badgeReady {
+  background-color: var(--color-roles-success-container);
+  color: var(--color-roles-on-success-container);
+}
+
+.badgeProcessing {
+  background-color: var(--color-roles-tertiary-container);
+  color: var(--color-roles-on-tertiary-container);
+}
+
+.badgeFailed {
+  background-color: var(--color-roles-error-container);
+  color: var(--color-roles-on-error-container);
+}
+
+.kebabWrap {
+  position: relative;
+}
+
+.kebabButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--ds-radius-small);
+  padding: 0;
+  cursor: pointer;
   color: var(--color-roles-on-surface-variant);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .kebabButton:hover {
+    color: var(--color-roles-on-surface);
+    background-color: var(--color-roles-surface-container-low);
+  }
+}
+
+.kebabMenu {
+  position: absolute;
+  top: calc(100% + var(--ds-spacing-xs));
+  right: 0;
+  min-width: 160px;
+  background-color: var(--color-roles-surface-container-lowest);
+  border: var(--ds-hairline-border);
+  border-radius: var(--ds-radius-small);
+  box-shadow: var(--effect-button-shadow-soft);
+  padding: var(--ds-spacing-xs);
+  z-index: 5;
+}
+
+.kebabMenuItem {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--color-roles-error);
+  border-radius: var(--ds-radius-small);
+  padding: var(--ds-spacing-sm);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .kebabMenuItem:hover {
+    background-color: var(--color-roles-error-container);
+  }
+}
+
+.projectName {
+  margin: 0;
+  color: var(--color-roles-on-surface);
+}
+
+.projectSubtext {
+  margin: 0;
+  color: var(--color-roles-on-surface-variant);
+}
+
+.cardDivider {
+  height: 1px;
+  background-color: var(--color-roles-surface-variant);
+  margin: var(--ds-spacing-xs) 0;
+}
+
+.cardFooter {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-spacing-xs);
+  color: var(--color-roles-on-surface-variant);
+}
+
+/* ---------- danger / cap-reached dialogs ---------- */
+.dialogIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--ds-radius-full);
+}
+
+.dialogIconDanger {
+  background-color: var(--color-roles-error-container);
+  color: var(--color-roles-on-error-container);
+}
+
+.dialogIconWarning {
+  background-color: var(--color-roles-tertiary-container);
+  color: var(--color-roles-on-tertiary-container);
+}
+
+/* Pinned to the modal's corner independently of the icon below — the icon
+   centers itself via .modalCentered's align-items: center, and this stays
+   anchored top-right regardless, matching the mockup (the two are never
+   laid out relative to each other). */
+.dialogCloseButton {
+  position: absolute;
+  top: var(--ds-spacing-lg);
+  right: var(--ds-spacing-lg);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--ds-radius-small);
+  padding: 0;
+  cursor: pointer;
+  color: var(--color-roles-on-surface-variant);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .dialogCloseButton:hover {
+    color: var(--color-roles-on-surface);
+  }
+}
+
+/* Centers heading/body copy and stretches the field + action buttons full
+   width, matching the delete-confirmation and project-cap-reached mockups
+   (both distinct from the left-aligned create-project modal). */
+.modalCentered {
+  position: relative;
+  align-items: center;
+  text-align: center;
+}
+
+.modalCentered .field {
+  width: 100%;
+  align-items: center;
+}
+
+.modalBodyText {
+  margin: 0;
+  color: var(--color-roles-on-surface-variant);
+}
+
+.modalCentered .buttonPrimary,
+.modalCentered .buttonSecondary,
+.modalCentered .buttonDanger {
+  width: 100%;
+}
+
+.buttonDanger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  cursor: pointer;
+  font-weight: 400;
+  background-color: var(--color-roles-error-container);
+  color: var(--color-roles-on-error-container);
+  border-radius: var(--ds-radius-medium);
+  padding: var(--ds-spacing-sm) var(--ds-spacing-lg);
+  transition: filter 0.15s ease;
+}
+
+.buttonDanger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .buttonDanger:hover:not(:disabled) {
+    filter: brightness(0.95);
+  }
 }

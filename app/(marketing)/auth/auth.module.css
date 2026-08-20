@@ -1,5 +1,5 @@
 .page {
-  height: 100vh;
+  height: 100dvh;
   display: flex;
   flex-direction: column;
   background-color: var(--color-roles-surface-container-low);
@@ -27,8 +27,6 @@
      act on and the card can push past the viewport uncontrolled. */
   min-height: 0;
   display: flex;
-  flex-direction: column;
-  gap: var(--ds-spacing-lg);
   align-items: center;
   justify-content: center;
   padding: var(--ds-spacing-xl);
@@ -39,6 +37,18 @@
   overflow-y: auto;
 }
 
+/* Logo + card as one block: .main centers this single unit, so the logo
+   can never drift away from the card the way it could when they were two
+   independently-centered flex children. */
+.cardGroup {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--ds-spacing-md);
+  width: 100%;
+  max-width: 400px;
+}
+
 @media (max-width: 720px) {
   .main {
     justify-content: center;
@@ -47,7 +57,6 @@
 
   .card {
     max-width: 100%;
-    margin: auto 0;
     padding: var(--ds-spacing-lg);
   }
 
@@ -131,7 +140,7 @@
   background-color: var(--color-roles-surface-container-lowest);
   color: var(--color-roles-on-surface);
   border: var(--ds-hairline-border);
-  border-radius: var(--ds-radius-small);
+  border-radius: var(--ds-radius-medium);
   padding: var(--ds-spacing-sm) var(--ds-spacing-lg);
   transition: background-color 0.15s ease;
 }
@@ -210,7 +219,7 @@
   flex-direction: column;
   gap: var(--ds-spacing-xs);
   margin: 0;
-  padding-left: var(--ds-spacing-base);
+  padding-left: 0;
   color: var(--color-roles-on-surface-variant);
 }
 
@@ -290,7 +299,7 @@
   font-weight: 400;
   background-color: var(--color-roles-primary);
   color: var(--color-roles-on-primary);
-  border-radius: var(--ds-radius-small);
+  border-radius: var(--ds-radius-medium);
   padding: var(--ds-spacing-sm) var(--ds-spacing-lg);
   transition: filter 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
 }

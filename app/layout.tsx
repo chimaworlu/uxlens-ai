@@ -18,9 +18,9 @@ const inter = Inter({
   display: "swap",
 });
 
-const TITLE = "UXLens AI — Turn Research Into Findings You Can Trust";
+const TITLE = "UXLens AI - Turn Research Into Findings You Can Trust";
 const DESCRIPTION =
-  "Upload interview notes, surveys, and feedback. UXLens AI returns organized themes, pain points, and suggestions — every insight cited back to its source.";
+  "Upload interview notes, surveys, and feedback. UXLens AI returns organized themes, pain points, and suggestions - every insight cited back to its source.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),

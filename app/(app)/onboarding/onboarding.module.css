@@ -1,5 +1,5 @@
 .page {
-  min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   flex-direction: column;
   background-color: var(--color-roles-surface-container-low);
@@ -184,7 +184,7 @@
   font-weight: 400;
   background-color: transparent;
   color: var(--color-roles-on-surface);
-  border-radius: var(--ds-radius-small);
+  border-radius: var(--ds-radius-medium);
   padding: var(--ds-spacing-sm) var(--ds-spacing-lg);
   transition: filter 0.15s ease;
 }
@@ -196,7 +196,7 @@
   border: 1px solid var(--color-roles-surface-variant);
   background-color: var(--color-roles-surface-container-lowest);
   color: var(--color-roles-on-surface);
-  border-radius: var(--ds-radius-small);
+  border-radius: var(--ds-radius-medium);
   padding: var(--ds-spacing-xs) var(--ds-spacing-md);
   cursor: pointer;
 }
@@ -232,7 +232,7 @@
   font-weight: 400;
   background-color: var(--color-roles-primary);
   color: var(--color-roles-on-primary);
-  border-radius: var(--ds-radius-small);
+  border-radius: var(--ds-radius-medium);
   padding: var(--ds-spacing-sm) var(--ds-spacing-lg);
   transition: filter 0.15s ease;
 }

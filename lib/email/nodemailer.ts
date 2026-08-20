@@ -4,35 +4,67 @@ import nodemailer, { type Transporter } from "nodemailer";
 // was: building the transporter at import time would throw synchronously if
 // GMAIL_USER/GMAIL_APP_PASSWORD are unset, crashing the entire worker
 // process on startup rather than just failing the one job that needed it.
-let transporter: Transporter | undefined;
+//
+// Two transporters, not one: this network's outbound port availability has
+// flipped between sessions — 465 blocked/587 reachable one time, the exact
+// reverse the next — so hardcoding a single port isn't durable here. One
+// SMTP send tries 587 (STARTTLS) first and falls back to 465 (implicit
+// TLS) within the same attempt, rather than burning the whole BullMQ
+// retry budget re-trying a port that happens to be down right now.
+let startTlsTransporter: Transporter | undefined;
+let implicitTlsTransporter: Transporter | undefined;
 
-function getTransporter(): Transporter {
-  if (!transporter) {
-    // Explicit host/port instead of the `service: "gmail"` shorthand: that
-    // preset defaults to port 465 (implicit TLS), which this network's
-    // outbound firewall blocks — connections there just hang until they
-    // time out. Port 587 (STARTTLS: connect plain, then upgrade) reaches
-    // smtp.gmail.com fine on the same network, same credentials.
-    transporter = nodemailer.createTransport({
+function getTransporter(port: 587 | 465): Transporter {
+  if (port === 587) {
+    if (!startTlsTransporter) {
+      startTlsTransporter = nodemailer.createTransport({
+        host: "smtp.gmail.com",
+        port: 587,
+        secure: false,
+        auth: {
+          user: process.env.GMAIL_USER,
+          pass: process.env.GMAIL_APP_PASSWORD,
+        },
+      });
+    }
+    return startTlsTransporter;
+  }
+
+  if (!implicitTlsTransporter) {
+    implicitTlsTransporter = nodemailer.createTransport({
       host: "smtp.gmail.com",
-      port: 587,
-      secure: false,
+      port: 465,
+      secure: true,
       auth: {
         user: process.env.GMAIL_USER,
         pass: process.env.GMAIL_APP_PASSWORD,
       },
     });
   }
-  return transporter;
+  return implicitTlsTransporter;
+}
+
+async function sendMailWithFallback(
+  mailOptions: Parameters<Transporter["sendMail"]>[0]
+): Promise<void> {
+  try {
+    await getTransporter(587).sendMail(mailOptions);
+  } catch (primaryError) {
+    try {
+      await getTransporter(465).sendMail(mailOptions);
+    } catch (fallbackError) {
+      throw fallbackError instanceof Error ? fallbackError : primaryError;
+    }
+  }
 }
 
 const FROM_EMAIL = process.env.GMAIL_USER;
 
 export async function sendVerificationEmail(to: string, code: string): Promise<void> {
-  await getTransporter().sendMail({
+  await sendMailWithFallback({
     from: `UXLens AI <${FROM_EMAIL}>`,
     to,
-    subject: "Verify your email — UXLens AI",
+    subject: "Verify your email - UXLens AI",
     text: `Your UXLens AI verification code is ${code}. It expires in 15 minutes. If you didn't request this, you can ignore this email.`,
     html: `
       <p>Your UXLens AI verification code is:</p>
@@ -59,7 +91,7 @@ Welcome aboard, and happy researching!
 
 The UXLens AI Team`;
 
-  await getTransporter().sendMail({
+  await sendMailWithFallback({
     from: `UXLens AI <${FROM_EMAIL}>`,
     to,
     subject: "Welcome to UXLens AI",
@@ -72,15 +104,15 @@ The UXLens AI Team`;
 }
 
 export async function sendPasswordResetEmail(to: string, code: string): Promise<void> {
-  await getTransporter().sendMail({
+  await sendMailWithFallback({
     from: `UXLens AI <${FROM_EMAIL}>`,
     to,
-    subject: "Reset your password — UXLens AI",
-    text: `Your UXLens AI password reset code is ${code}. It expires in 15 minutes. If you didn't request this, you can ignore this email — your password will not be changed.`,
+    subject: "Reset your password - UXLens AI",
+    text: `Your UXLens AI password reset code is ${code}. It expires in 15 minutes. If you didn't request this, you can ignore this email - your password will not be changed.`,
     html: `
       <p>Your UXLens AI password reset code is:</p>
       <p style="font-size: 28px; font-weight: 700; letter-spacing: 4px;">${code}</p>
-      <p>This code expires in 15 minutes. If you didn't request this, you can ignore this email — your password will not be changed.</p>
+      <p>This code expires in 15 minutes. If you didn't request this, you can ignore this email - your password will not be changed.</p>
     `,
   });
 }
