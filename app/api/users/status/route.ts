@@ -1,20 +1,14 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db/prisma";
-import { PROJECT_LIMITS } from "@/lib/quota/checks";
+import { PROJECT_LIMITS, DOCUMENT_LIMITS, STORAGE_LIMIT_BYTES } from "@/lib/quota/checks";
+import { getSessionUserId } from "@/lib/auth/session";
 
-// Placeholder stand-in for a real session lookup — there's no login/session
-// system yet, so this just looks a user up by the email carried through the
-// client-side flow. Not an auth boundary; do not treat this as one once
-// real sessions exist.
-export async function GET(request: Request) {
-  const email = new URL(request.url).searchParams.get("email")?.trim().toLowerCase();
-
-  if (!email) {
-    return NextResponse.json({ error: "Missing email." }, { status: 400 });
-  }
+export async function GET() {
+  const userId = await getSessionUserId();
+  if (!userId) return NextResponse.json({ error: "Not signed in." }, { status: 401 });
 
   const user = await prisma.user.findUnique({
-    where: { email },
+    where: { id: userId },
     select: { name: true, email: true, emailVerified: true, plan: true },
   });
 
@@ -26,6 +20,9 @@ export async function GET(request: Request) {
     name: user.name,
     email: user.email,
     verified: user.emailVerified !== null,
+    plan: user.plan,
     projectLimit: PROJECT_LIMITS[user.plan],
+    documentLimit: DOCUMENT_LIMITS[user.plan],
+    storageLimitBytes: STORAGE_LIMIT_BYTES[user.plan],
   });
 }

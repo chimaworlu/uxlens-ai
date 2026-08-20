@@ -4,11 +4,13 @@ import Google from "next-auth/providers/google";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "@/lib/db/prisma";
 import { verifyPassword } from "@/lib/auth/password";
+import { authConfig } from "./auth.config";
 
 const isProduction = process.env.NODE_ENV === "production";
 const SESSION_MAX_AGE_SECONDS = 30 * 24 * 60 * 60; // 30 days
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  ...authConfig,
   adapter: PrismaAdapter(prisma),
   // The Credentials provider cannot use database-backed sessions (Auth.js
   // constraint — a credentials sign-in isn't verified by the adapter the
@@ -36,9 +38,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         secure: isProduction,
       },
     },
-  },
-  pages: {
-    signIn: "/auth",
   },
   providers: [
     Credentials({
@@ -81,18 +80,4 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         ]
       : []),
   ],
-  callbacks: {
-    async jwt({ token, user }) {
-      if (user) {
-        token.id = user.id;
-      }
-      return token;
-    },
-    async session({ session, token }) {
-      if (session.user) {
-        session.user.id = token.id as string;
-      }
-      return session;
-    },
-  },
 });

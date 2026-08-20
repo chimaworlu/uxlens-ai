@@ -1,38 +1,28 @@
 import { NextResponse } from "next/server";
-import { z } from "zod";
 import { prisma } from "@/lib/db/prisma";
 import { createVerificationCode } from "@/lib/auth/verification";
 import { enqueueVerificationEmail } from "@/lib/queue/email";
+import { getSessionUserId } from "@/lib/auth/session";
 
-const ResendSchema = z.object({
-  email: z.string().trim().toLowerCase().min(1),
-});
-
-export async function POST(request: Request) {
-  const body: unknown = await request.json().catch(() => null);
-  const parsed = ResendSchema.safeParse(body);
-
-  if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid request." }, { status: 400 });
-  }
-
-  const { email } = parsed.data;
+export async function POST() {
+  const userId = await getSessionUserId();
+  if (!userId) return NextResponse.json({ error: "Not signed in." }, { status: 401 });
 
   const user = await prisma.user.findUnique({
-    where: { email },
-    select: { emailVerified: true },
+    where: { id: userId },
+    select: { email: true, emailVerified: true },
   });
 
   if (!user) {
-    return NextResponse.json({ error: "No account found for this email." }, { status: 404 });
+    return NextResponse.json({ error: "No account found." }, { status: 404 });
   }
 
   if (user.emailVerified) {
     return NextResponse.json({ error: "This email is already verified." }, { status: 400 });
   }
 
-  const code = await createVerificationCode(email);
-  await enqueueVerificationEmail(email, code);
+  const code = await createVerificationCode(user.email);
+  await enqueueVerificationEmail(user.email, code);
 
   return NextResponse.json({ sent: true }, { status: 200 });
 }

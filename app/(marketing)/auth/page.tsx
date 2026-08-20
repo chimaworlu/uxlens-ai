@@ -20,11 +20,11 @@ type View =
   | "reset-new-password";
 
 const TITLE_COPY: Record<View, string> = {
-  "sign-in": "Sign in — UXLens AI",
-  "sign-up": "Sign up — UXLens AI",
-  "reset-request": "Reset your password — UXLens AI",
-  "reset-verify": "Enter reset code — UXLens AI",
-  "reset-new-password": "Set a new password — UXLens AI",
+  "sign-in": "Sign in - UXLens AI",
+  "sign-up": "Sign up - UXLens AI",
+  "reset-request": "Reset your password - UXLens AI",
+  "reset-verify": "Enter reset code - UXLens AI",
+  "reset-new-password": "Set a new password - UXLens AI",
 };
 
 export default function AuthPage() {
@@ -57,7 +57,7 @@ function AuthPageContent() {
     // No blocking verify-pending screen (FR-2: verification doesn't gate
     // app use, only analysis) — straight through to onboarding, where the
     // dashboard picks up the non-blocking verify banner instead.
-    router.push(`/onboarding?email=${encodeURIComponent(email)}`);
+    router.push("/onboarding");
   }
 
   function handleResetVerifySuccess(code: string) {
@@ -68,46 +68,52 @@ function AuthPageContent() {
   return (
     <div className={styles.page}>
       <main className={styles.main}>
-        <LogoLink />
-        {view === "sign-in" && (
-          <SignInCard
-            email={email}
-            onEmailChange={setEmail}
-            onSwitchToSignUp={() => setView("sign-up")}
-            onForgotPassword={() => setView("reset-request")}
-          />
-        )}
-        {view === "sign-up" && (
-          <SignUpCard
-            email={email}
-            onEmailChange={setEmail}
-            onSwitchToSignIn={() => setView("sign-in")}
-            onSuccess={handleSignUpSuccess}
-          />
-        )}
-        {view === "reset-request" && (
-          <ResetRequestCard
-            email={email}
-            onEmailChange={setEmail}
-            onSwitchToSignIn={() => setView("sign-in")}
-            onSuccess={() => setView("reset-verify")}
-          />
-        )}
-        {view === "reset-verify" && (
-          <ResetVerifyCard
-            email={email}
-            onSwitchToSignIn={() => setView("sign-in")}
-            onSuccess={handleResetVerifySuccess}
-          />
-        )}
-        {view === "reset-new-password" && (
-          <ResetNewPasswordCard
-            email={email}
-            code={resetCode}
-            onSwitchToSignIn={() => setView("sign-in")}
-            onComplete={() => setView("sign-in")}
-          />
-        )}
+        {/* Logo + card travel together as one centered unit — keeping them
+            as independent flex children previously let them drift apart on
+            mobile (each competing for its own centering space); grouping
+            them means there's only ever one thing to center. */}
+        <div className={styles.cardGroup}>
+          <LogoLink />
+          {view === "sign-in" && (
+            <SignInCard
+              email={email}
+              onEmailChange={setEmail}
+              onSwitchToSignUp={() => setView("sign-up")}
+              onForgotPassword={() => setView("reset-request")}
+            />
+          )}
+          {view === "sign-up" && (
+            <SignUpCard
+              email={email}
+              onEmailChange={setEmail}
+              onSwitchToSignIn={() => setView("sign-in")}
+              onSuccess={handleSignUpSuccess}
+            />
+          )}
+          {view === "reset-request" && (
+            <ResetRequestCard
+              email={email}
+              onEmailChange={setEmail}
+              onSwitchToSignIn={() => setView("sign-in")}
+              onSuccess={() => setView("reset-verify")}
+            />
+          )}
+          {view === "reset-verify" && (
+            <ResetVerifyCard
+              email={email}
+              onSwitchToSignIn={() => setView("sign-in")}
+              onSuccess={handleResetVerifySuccess}
+            />
+          )}
+          {view === "reset-new-password" && (
+            <ResetNewPasswordCard
+              email={email}
+              code={resetCode}
+              onSwitchToSignIn={() => setView("sign-in")}
+              onComplete={() => setView("sign-in")}
+            />
+          )}
+        </div>
       </main>
     </div>
   );
@@ -150,7 +156,7 @@ function SignInCard({
         setSubmitError("Incorrect email or password.");
         return;
       }
-      router.push(`/projects?email=${encodeURIComponent(email)}`);
+      router.push("/projects");
     } catch {
       setSubmitError("We could not sign you in right now. Check your connection and try again.");
     } finally {
@@ -165,7 +171,6 @@ function SignInCard({
         <p className={`${styles.subtitle} ds-body-medium`}>
           Sign in to continue to your research
         </p>
-        <p className={`${styles.modeLabel} ds-label-medium`}>Sign in</p>
       </div>
 
       <GoogleButton />
@@ -270,6 +275,15 @@ function SignUpCard({
         return;
       }
 
+      // Registering only creates the account row — establish the actual
+      // session the same way sign-in does, since onboarding (and everything
+      // after it) is now a protected route that needs one.
+      const result = await signIn("credentials", { email, password, redirect: false });
+      if (result?.error) {
+        setSubmitError("Account created. Please sign in.");
+        return;
+      }
+
       onSuccess();
     } catch {
       setSubmitError("We could not create your account right now. Check your connection and try again.");
@@ -285,7 +299,6 @@ function SignUpCard({
         <p className={`${styles.subtitle} ds-body-medium`}>
           Start turning your research into trusted findings
         </p>
-        <p className={`${styles.modeLabel} ds-label-medium`}>Sign up</p>
       </div>
 
       <GoogleButton />

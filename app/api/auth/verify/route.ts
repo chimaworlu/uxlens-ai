@@ -2,13 +2,16 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db/prisma";
 import { consumeVerificationCode } from "@/lib/auth/verification";
+import { getSessionUserId } from "@/lib/auth/session";
 
 const VerifySchema = z.object({
-  email: z.string().trim().toLowerCase().min(1),
   code: z.string().trim().length(6),
 });
 
 export async function POST(request: Request) {
+  const userId = await getSessionUserId();
+  if (!userId) return NextResponse.json({ error: "Not signed in." }, { status: 401 });
+
   const body: unknown = await request.json().catch(() => null);
   const parsed = VerifySchema.safeParse(body);
 
@@ -16,8 +19,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid request." }, { status: 400 });
   }
 
-  const { email, code } = parsed.data;
-  const result = await consumeVerificationCode(email, code);
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { email: true } });
+  if (!user) return NextResponse.json({ error: "No account found." }, { status: 404 });
+
+  const { code } = parsed.data;
+  const result = await consumeVerificationCode(user.email, code);
 
   if (result === "invalid") {
     return NextResponse.json({ error: "Incorrect verification code." }, { status: 400 });
@@ -32,7 +38,7 @@ export async function POST(request: Request) {
   // FR-2: this is the one place email verification actually takes effect —
   // consumeVerificationCode itself only checks/spends the code.
   await prisma.user.update({
-    where: { email },
+    where: { id: userId },
     data: { emailVerified: new Date() },
   });
 

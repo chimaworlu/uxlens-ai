@@ -1,7 +1,7 @@
 "use client";
 
-import { Suspense, useRef, useState, type TouchEvent } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRef, useState, type TouchEvent } from "react";
+import { useRouter } from "next/navigation";
 import styles from "./onboarding.module.css";
 
 const TOTAL_STEPS = 3;
@@ -13,25 +13,15 @@ const STEP_LABELS = {
 } as const;
 
 const PLAN_LIMITS: { label: string; value: string }[] = [
-  { label: "Active projects", value: "3" },
-  { label: "Documents per project", value: "10" },
-  { label: "Storage per project", value: "100 MB" },
-  { label: "Analysis runs per month", value: "3" },
+  { label: "Active projects", value: "1" },
+  { label: "Documents per project", value: "1" },
+  { label: "Storage per project", value: "30 MB" },
+  { label: "Analysis runs per month", value: "2" },
   { label: "Chat messages per day", value: "30" },
 ];
 
 export default function OnboardingPage() {
-  return (
-    <Suspense fallback={null}>
-      <OnboardingContent />
-    </Suspense>
-  );
-}
-
-function OnboardingContent() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const email = searchParams.get("email") ?? "";
 
   const [step, setStep] = useState(1);
   const touchStartX = useRef<number | null>(null);
@@ -47,6 +37,7 @@ function OnboardingContent() {
 
   function handleTouchStart(event: TouchEvent<HTMLDivElement>) {
     const touch = event.touches[0];
+    if (!touch) return;
     touchStartX.current = touch.clientX;
     touchStartY.current = touch.clientY;
   }
@@ -55,6 +46,7 @@ function OnboardingContent() {
     if (touchStartX.current === null || touchStartY.current === null) return;
 
     const touch = event.changedTouches[0];
+    if (!touch) return;
     const deltaX = touch.clientX - touchStartX.current;
     const deltaY = touch.clientY - touchStartY.current;
 
@@ -71,10 +63,7 @@ function OnboardingContent() {
   }
 
   function goToDashboard() {
-    // No real session yet (see AGENTS.md gap flagged in conversation) —
-    // carrying the email through as a query param is a placeholder stand-in
-    // for a real logged-in session, not a security boundary.
-    router.push(`/projects?email=${encodeURIComponent(email)}`);
+    router.push("/projects");
   }
 
   return (
@@ -111,7 +100,7 @@ function OnboardingContent() {
               <button
                 type="button"
                 className={`${styles.stepSkipButton} ds-label-large ds-focus-ring`}
-                onClick={() => router.push(`/projects?email=${encodeURIComponent(email)}`)}
+                onClick={() => router.push("/projects")}
               >
                 Skip for now
               </button>
@@ -145,7 +134,7 @@ function OnboardingContent() {
               <button
                 type="button"
                 className={`${styles.stepSkipButton} ds-label-large ds-focus-ring`}
-                onClick={() => router.push(`/projects?email=${encodeURIComponent(email)}`)}
+                onClick={() => router.push("/projects")}
               >
                 Skip for now
               </button>
