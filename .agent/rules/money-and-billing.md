@@ -16,11 +16,11 @@ This file is the single place every money-related rule lives. If you're touching
 
 | | Free | Pro — ₦3,000/month |
 |---|---|---|
-| Active projects | 3 | 50 |
-| Documents per project | 10 | 25 |
-| Analysis runs / month | 3 | 30 |
+| Active projects | 1 | 15 |
+| Documents per project | 1 | 20 |
+| Analysis runs / month | 2 | 30 |
 | Chat messages / day | 30 | 500 |
-| Storage | 100 MB | 2 GB |
+| Storage per project | 30 MB | 500 MB |
 | Analysis version history | keep 1 | keep 5 |
 
 - These numbers are locked. Do not change a tier limit to make a feature easier to build, test, or demo — including in your own dev/test environment, where limits must still be enforced identically to production.

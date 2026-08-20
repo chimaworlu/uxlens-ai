@@ -6,7 +6,7 @@ Brand name confirmed by the founder: UXLens AI.
 
 UXLens AI is a web application that turns raw UX research documents into structured, citable insights. A product designer creates a project, uploads interview notes, survey exports, and customer feedback (PDF, DOCX, TXT, CSV), and triggers an analysis. The system extracts text, runs a multi-pass AI pipeline (DeepSeek confirmed for all passes; Claude optional as an upgrade for synthesis and chat, see Section 6), and produces: a project summary, ranked recurring themes, pain points, and user suggestions. Every output is linked to the exact source snippet it came from, and clicking a citation reveals the original text. A project-scoped chat lets the designer interrogate the research; answers are grounded in the uploaded documents, and any general UX knowledge the AI adds is visually labeled as such.
 
-The product is single-user at MVP, freemium (3 analyses/month free, paid tier via Flutterwave, NGN only per NG-7), English-only, and built on Next.js (App Router), TypeScript, Prisma, PostgreSQL, BullMQ + Redis, and Cloudflare R2. It serves a dual purpose: a real revenue product and a flagship portfolio piece, so the MVP must be polished enough to demo end-to-end (a public, no-signup demo, see FR-37), not just functional.
+The product is single-user at MVP, freemium (2 analyses/month free, paid tier via Flutterwave, NGN only per NG-7), English-only, and built on Next.js (App Router), TypeScript, Prisma, PostgreSQL, BullMQ + Redis, and Cloudflare R2. It serves a dual purpose: a real revenue product and a flagship portfolio piece, so the MVP must be polished enough to demo end-to-end (a public, no-signup demo, see FR-37), not just functional.
 
 ## 2. Problem Statement
 
@@ -65,18 +65,18 @@ Generic AI chatbots don't solve this because (a) they lose track of which docume
 - FR-41: First-time users complete a four-step onboarding flow before reaching the dashboard, in this exact order:
   1. What UXLens does — a brief product explanation screen.
   2. The PII notice, using FR-12's exact wording: "Research documents often contain personal data about participants. Remove names and identifying details you don't need. Files are stored privately and never used to train AI models."
-  3. Plan limits — displays the five Free-tier figures: 3 active projects (FR-7), 10 documents per project (FR-9), 100 MB storage (FR-42), 3 analysis runs/month (FR-21), and 30 chat messages/day (FR-31).
+  3. Plan limits — displays the five Free-tier figures: 1 active project (FR-7), 1 document per project (FR-9), 30 MB storage (FR-42), 2 analysis runs/month (FR-21), and 30 chat messages/day (FR-31).
   4. Create your first project — this step both creates the project and ends onboarding, landing the user on the dashboard.
 
 ### Projects
 - FR-5: Users can create, rename, archive, and delete projects. Delete requires typed confirmation and cascades to documents, analyses, insights, and chat history, and deletes R2 objects within 24 hours via a cleanup job.
 - FR-6: Project list shows: name, document count, last analysis date, and a status badge. Status badges show processing, ready, or failed, each corresponding to a real Analysis row's status. A project with no Analysis rows yet shows no badge, or a neutral "Not analyzed" label, this is the absence of an analysis, not a fourth status value, and does not correspond to any AnalysisStatus enum member.
-- FR-7: Free tier: max 3 active (non-archived) projects. Pro tier: max 50. Enforced at creation with an upgrade prompt.
+- FR-7: Free tier: max 1 active (non-archived) project. Pro tier: max 15. Enforced at creation with an upgrade prompt.
 
 ### Upload
 - FR-8: Users can upload PDF, DOCX, TXT, CSV. Client validates extension and MIME type; server re-validates MIME via magic bytes and rejects mismatches with a specific error message.
-- FR-9: Max file size 20 MB per file; max 25 documents per project (free: 10 per project).
-- FR-42: Free tier storage capped at 100 MB per user, Pro at 2 GB, enforced server-side at presign time.
+- FR-9: Max file size 20 MB per file; max 20 documents per project (free: 1 per project).
+- FR-42: Free tier storage capped at 30 MB per project, Pro at 500 MB per project, enforced server-side at presign time.
 - FR-10: Uploads go directly to Cloudflare R2 via presigned PUT URLs generated server-side; the app server never proxies file bytes.
 - FR-11: On upload completion, a `document-processing` job is enqueued that extracts text, chunks it, and stores chunks. Document status transitions: `UPLOADED → EXTRACTING → READY` or `→ FAILED` with a user-readable failure reason (e.g. "This PDF contains no extractable text. It may be a scanned image, which isn't supported yet.").
 - FR-12: A persistent, non-blocking PII notice appears on every upload screen: "Research documents often contain personal data about participants. Remove names and identifying details you don't need. Files are stored privately and never used to train AI models."
@@ -90,13 +90,13 @@ Generic AI chatbots don't solve this because (a) they lose track of which docume
 - FR-18: Every theme, pain point, suggestion, and contradiction stores 1–10 citations. Each citation links to a specific document chunk with character offsets. Clicking a citation opens a panel showing the snippet highlighted inside its surrounding original text and the source document name.
 - FR-19: If a claimed citation cannot be matched back to stored source text (verification step, see section 6), the parent insight is dropped and the drop is logged. Insights without verifiable citations must never render.
 - FR-20: Re-running analysis creates a new Analysis version, viewable via a version dropdown. Free tier: previous version is replaced (keep 1). Pro tier: keep last 5, prune older. This matches the Section 8 pricing table.
-- FR-21: Free tier: 3 analysis runs per calendar month across all projects. Pro: 30 runs/month. Counter and reset date visible in the billing page. Enforced server-side before enqueueing.
+- FR-21: Free tier: 2 analysis runs per calendar month across all projects. Pro: 30 runs/month. Counter and reset date visible in the billing page. Enforced server-side before enqueueing.
 - FR-22: Low-signal input handling: if total extracted text across the project is under 300 words, analysis is refused pre-enqueue with the message "There isn't enough research content here to analyze meaningfully. Add more documents or richer notes." No run is consumed.
 - FR-22b: High-volume input handling: if total extracted text across the project exceeds 300k tokens, analysis is refused pre-enqueue with the message "This project has more content than a single analysis can process. Remove some documents or split into two projects." No run is consumed. This caps the worst-case cost referenced in G-4 and the Section 6 cost budget.
 
 ### Insights View
 - FR-23: The insights page renders the five FR-17 sections with anchor navigation, per-theme evidence counts ("mentioned in 6 of 9 documents"), and citation chips inline.
-- FR-24: Users can copy any insight (with its citations formatted as "Document name, snippet") to clipboard, and export the full analysis as Markdown. [ASSUMPTION] PDF export deferred to Phase 2.
+- FR-24: Users can copy any insight (with its citations formatted as "Document name, snippet") to clipboard, and export the full analysis as PDF.
 - FR-25: Users can mark an insight as "starred"; starred insights surface at the top. Stars persist within an analysis version only. Cross-version star persistence is a Phase 2 item (see Section 13), not attempted at MVP.
 
 ### Chat
@@ -179,7 +179,7 @@ Provider split: DeepSeek (`deepseek-chat`) is confirmed for all passes — extra
 | /api/projects/:id/analysis | POST | enqueue analysis (quota check) |
 | /api/projects/:id/analysis/status | GET | poll status + progress stage |
 | /api/analyses/:id | GET | fetch analysis payload |
-| /api/analyses/:id/export | GET | Markdown export |
+| /api/analyses/:id/export | GET | PDF export |
 | /api/projects/:id/chat | POST | ask question (SSE stream) |
 | /api/projects/:id/chat/history | GET, DELETE | fetch/clear history |
 | /api/billing/checkout | POST | create Flutterwave payment link |
@@ -203,7 +203,7 @@ Provider split: DeepSeek (`deepseek-chat`) is confirmed for all passes — extra
 
 ### Storage and data handling
 - R2 bucket private; all reads via short-lived presigned GET URLs (15 min). Object keys: `users/{userId}/projects/{projectId}/docs/{documentId}/{sanitizedFilename}`.
-- Free tier storage cap 100 MB/user, Pro 2 GB, enforced at presign time. See FR-42.
+- Free tier storage cap 30 MB/project, Pro 500 MB/project, enforced at presign time. See FR-42.
 - Account deletion (user-initiated, in settings) hard-deletes all rows and R2 objects within 24 hours via a `cleanup` job. See FR-38 for the full account deletion flow, including subscription cancellation and confirmation requirements.
 - Explicit product commitment surfaced in UI and ToS: user documents are never used to train models; API calls to any enabled provider use training opt-out defaults of their commercial API terms. ToS names DeepSeek as the confirmed processor for all research content and questions, and Claude as an optional processor for synthesis/chat if enabled (see R-11 and Section 6).
 
@@ -213,13 +213,13 @@ Purpose is dual (revenue + portfolio), so pricing is real but deliberately simpl
 
 | | Free | Pro — ₦3,000/month (NGN) |
 |---|---|---|
-| Active projects | 3 | 50 |
-| Documents per project | 10 | 25 |
-| Analysis runs / month | 3 | 30 |
+| Active projects | 1 | 15 |
+| Documents per project | 1 | 20 |
+| Analysis runs / month | 2 | 30 |
 | Chat messages / day | 30 | 500 |
-| Storage | 100 MB | 2 GB |
+| Storage per project | 30 MB | 500 MB |
 | Analysis version history | last 1 | last 5 |
-| Markdown export | ✅ | ✅ |
+| PDF export | ✅ | ✅ |
 
 - Payments: Flutterwave Payment Plans (monthly recurring, NGN). [ASSUMPTION] ₦3,000/mo (≈ $2.17 at ~₦1,380/$, July 2026); validate against Nigerian designer willingness-to-pay before launch and revisit after 50 paying users. Price is reviewed quarterly against the NGN/USD rate (see R-8).
 - Upgrade triggers (in-product): hitting the analysis quota (strongest intent moment — show upgrade modal with the exact insight they're blocked from generating), hitting the project cap, hitting daily chat cap, storage cap at upload.
@@ -554,7 +554,7 @@ Instrument all of these from day one (portfolio goal G-5 depends on real numbers
 All assumptions added by this PRD beyond the prompt, consolidated:
 
 - A-2: Auth.js (NextAuth v5) with Prisma adapter for authentication (FR-1). **[CONFIRMED]**
-- A-3: PDF export deferred to Phase 2; Markdown export at MVP (FR-24).
+- A-3: PDF export at MVP (FR-24).
 - A-4: Retrieval via PostgreSQL full-text search with AI keyword expansion; no embeddings provider (Section 6). Rationale: keeps the stack exactly as locked with zero new vendors; embeddings are the upgrade path only if M-5 underperforms.
 - A-5: deepseek-chat confirmed for all passes (extraction, synthesis, chat) behind a provider interface; claude-sonnet-4-6 optional as a config-toggled upgrade for synthesis/chat, evaluated against the golden eval set before being made default (Section 6). This reflects the founder's confirmed choice: "DeepSeek, and maybe Claude, for integrations."
 - A-6: Status updates via polling, not websockets, at MVP (Section 6).
@@ -568,7 +568,7 @@ All assumptions added by this PRD beyond the prompt, consolidated:
 ## 13. Phased Roadmap
 
 ### Phase 1 — MVP (weeks 1–8): "Upload → cited insights → chat"
-Ships: auth, projects, upload (4 formats), full analysis pipeline with citation verification, insights view, grounded chat, Markdown export, free tier limits, Flutterwave Pro checkout, public demo mode (FR-37), analytics instrumentation.
+Ships: auth, projects, upload (4 formats), full analysis pipeline with citation verification, insights view, grounded chat, PDF export, free tier limits, Flutterwave Pro checkout, public demo mode (FR-37), analytics instrumentation.
 Why: this is the complete core loop and the smallest thing that is both sellable and portfolio-worthy.
 
 **Priority order within Phase 1** (for a solo founder — if the schedule slips, cut from the bottom, not at random):
