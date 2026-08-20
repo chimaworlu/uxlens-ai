@@ -7,39 +7,39 @@ import styles from "./page.module.css";
 type Section = "home" | "testimonial" | "contact";
 
 const TITLE_COPY: Record<Section, string> = {
-  home: "UXLens AI — Turn Research Into Findings You Can Trust",
-  testimonial: "Testimonials — UXLens AI",
-  contact: "Contact — UXLens AI",
+  home: "UXLens AI - Turn Research Into Findings You Can Trust",
+  testimonial: "Testimonials - UXLens AI",
+  contact: "Contact - UXLens AI",
 };
 
 const FOOTER_COPY: Record<Section, string> = {
-  home: "UXLens AI · Built for researches",
+  home: "UXLens AI · Built for Product Designers",
   testimonial:
-    "UXLens AI helps solo researchers uncover the insights that drive real business growth.",
-  contact: "UXLens AI · Built for researches",
+    "UXLens AI helps solo Product Designer uncover the insights that drive real business growth.",
+  contact: "UXLens AI · Built for Product Designers",
 };
 
 const TESTIMONIALS = [
   {
     initials: "MR",
     name: "Maya Rivera",
-    role: "Solo UX Researcher, Freelance",
+    role: "Solo Product Designer, Freelance",
     quote:
-      "As a solo researcher, I used to drown in transcripts with no time to connect the dots. UXLens AI surfaced the exact insight that led us to pivot our onboarding revenue jumped 22% in one quarter.",
+      "As a solo product designer, I used to drown in transcripts with no time to connect the dots. UXLens AI surfaced the exact insight that led us to pivot our onboarding revenue jumped 22% in one quarter.",
   },
   {
     initials: "JT",
     name: "James Thornton",
-    role: "Independent Research Consultant",
+    role: "Independent Product Design Consultant",
     quote:
-      "I'm a one-person research team, and UXLens AI gave me the firepower of an entire department. It uncovered a retention pattern I'd missed fixing it drove a 3x improvement in user activation.",
+      "I'm a one-person design team, and UXLens AI gave me the firepower of an entire department. It uncovered a retention pattern I'd missed fixing it drove a 3x improvement in user activation.",
   },
   {
     initials: "AP",
     name: "Anika Patel",
-    role: "Solo Researcher & Product Advisor",
+    role: "Solo Product Designer & Product Advisor",
     quote:
-      "Running research solo used to mean choosing between speed and depth. UXLens AI let me do both the insights it found directly shaped a feature that grew our MRR by 40%.",
+      "Running product design solo used to mean choosing between speed and depth. UXLens AI let me do both the insights it found directly shaped a feature that grew our MRR by 40%.",
   },
 ];
 
@@ -180,9 +180,9 @@ function HeroSection() {
 function TestimonialSection() {
   return (
     <div className={styles.section}>
-      <h2 className="ds-headline-large">Trusted by researchers everywhere</h2>
+      <h2 className="ds-headline-large">Trusted by product designers everywhere</h2>
       <p className="ds-body-large">
-        UXLens AI helps solo researchers uncover the insights that drive real
+        UXLens AI helps solo Product Designer uncover the insights that drive real
         business growth.
       </p>
 

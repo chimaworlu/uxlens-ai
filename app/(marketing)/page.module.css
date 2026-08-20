@@ -1,5 +1,5 @@
 .page {
-  min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   flex-direction: column;
 }
@@ -16,7 +16,7 @@
 @media (max-width: 720px) {
   .nav {
     flex-wrap: wrap;
-    justify-content: center;
+    justify-content: space-between;
     padding: var(--ds-spacing-base) var(--ds-spacing-lg);
   }
 
@@ -128,8 +128,8 @@
 .navLink::after {
   content: "";
   position: absolute;
-  left: 0;
-  right: 0;
+  left: var(--ds-spacing-sm);
+  right: var(--ds-spacing-sm);
   bottom: 0;
   height: 2px;
   background-color: var(--color-roles-primary);
@@ -238,7 +238,7 @@
   cursor: pointer;
   background-color: var(--color-roles-primary);
   color: var(--color-roles-on-primary);
-  border-radius: var(--ds-radius-small);
+  border-radius: var(--ds-radius-medium);
   padding: var(--ds-spacing-sm) var(--ds-spacing-lg);
   transition: filter 0.15s ease, box-shadow 0.15s ease;
 }
@@ -253,7 +253,7 @@
   background-color: transparent;
   color: var(--color-roles-primary);
   border: 1px solid var(--color-roles-primary);
-  border-radius: var(--ds-radius-small);
+  border-radius: var(--ds-radius-medium);
   padding: var(--ds-spacing-sm) var(--ds-spacing-lg);
   transition: background-color 0.15s ease, box-shadow 0.15s ease;
 }
