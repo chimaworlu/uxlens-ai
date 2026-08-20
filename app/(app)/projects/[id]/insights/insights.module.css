@@ -1,0 +1,622 @@
+.emptyState {
+  margin-top: var(--ds-spacing-xxl);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--ds-spacing-sm);
+  padding: var(--ds-spacing-xxl) var(--ds-spacing-lg);
+}
+
+.emptyState > svg {
+  color: var(--color-roles-on-surface-variant);
+  margin-bottom: var(--ds-spacing-sm);
+}
+
+.emptyState h2 {
+  color: var(--color-roles-on-surface);
+  margin: 0;
+}
+
+.emptyState p {
+  max-width: 460px;
+  color: var(--color-roles-on-surface-variant);
+  margin: 0;
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--ds-spacing-sm);
+  width: 100%;
+  max-width: 280px;
+  margin-top: var(--ds-spacing-sm);
+}
+
+.emptyState > button,
+.emptyState > a {
+  margin-top: var(--ds-spacing-sm);
+}
+
+/* ---------- in-progress ---------- */
+/* Track and icon are separate layers on purpose: only the track spins,
+   the document icon stays put in the center — a rotating icon reads as
+   broken, not "loading". */
+.progressRing {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 96px;
+  height: 96px;
+  margin-bottom: var(--ds-spacing-sm);
+}
+
+.progressRingTrack {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 4px solid var(--color-roles-surface-variant);
+  border-top-color: var(--color-roles-primary);
+  border-right-color: var(--color-roles-primary);
+  animation: spin 1.4s linear infinite;
+}
+
+.progressRing svg {
+  position: relative;
+  color: var(--color-roles-primary);
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.stageCard {
+  width: 100%;
+  max-width: 460px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-spacing-md);
+  background-color: var(--color-roles-surface-container-low);
+  border: var(--ds-hairline-border);
+  border-radius: var(--ds-radius-medium);
+  padding: var(--ds-spacing-lg);
+  margin-top: var(--ds-spacing-md);
+  text-align: left;
+}
+
+.stageRow {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-spacing-md);
+  color: var(--color-roles-on-surface);
+}
+
+.checkCircle {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background-color: var(--color-roles-success-container);
+  color: var(--color-roles-on-success-container);
+}
+
+.activeIcon {
+  flex-shrink: 0;
+  color: var(--color-roles-primary);
+}
+
+.stagePending {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1.5px solid var(--color-roles-surface-variant);
+}
+
+.stageTextPending {
+  color: var(--color-roles-on-surface-variant);
+}
+
+.hint {
+  color: var(--color-roles-on-surface-variant);
+  margin-top: var(--ds-spacing-md);
+}
+
+/* ---------- quota lock ---------- */
+.lockIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background-color: var(--color-roles-tertiary-container);
+  color: var(--color-roles-on-tertiary-container);
+  margin-bottom: var(--ds-spacing-sm);
+}
+
+/* ---------- top bar: brand + breadcrumb + version, inline ---------- */
+.navLeft {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-spacing-lg);
+}
+
+/* ---------- top-bar actions (Insights/Chat only, per nav rules) ---------- */
+.navActions {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-spacing-sm);
+}
+
+.versionMenu {
+  position: relative;
+}
+
+.versionTrigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background-color: var(--color-roles-surface);
+  border: var(--ds-hairline-border);
+  border-radius: var(--ds-radius-full);
+  padding: 4px var(--ds-spacing-md);
+  color: var(--color-roles-on-surface);
+  cursor: pointer;
+}
+
+.versionPanel {
+  position: absolute;
+  top: calc(100% + var(--ds-spacing-xs));
+  left: 0;
+  width: max(280px, 100%);
+  z-index: 15;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--color-roles-surface);
+  border-radius: var(--ds-radius-medium);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 15%);
+  padding: var(--ds-spacing-xs);
+  gap: 2px;
+}
+
+.versionRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ds-spacing-md);
+  text-align: left;
+  background: none;
+  border: none;
+  border-radius: var(--ds-radius-small);
+  padding: var(--ds-spacing-sm) var(--ds-spacing-md);
+  cursor: pointer;
+  color: var(--color-roles-on-surface);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .versionRow:hover {
+    background-color: var(--color-roles-surface-container-low);
+  }
+}
+
+.versionRowSelected,
+.versionRowSelected:hover {
+  background-color: var(--color-roles-primary-container);
+}
+
+.versionRowText {
+  display: flex;
+  flex-direction: column;
+}
+
+.versionRowTitle {
+  color: var(--color-roles-on-surface);
+}
+
+.versionRowSelected .versionRowTitle {
+  color: var(--color-roles-primary);
+  font-weight: 600;
+}
+
+.versionRowMeta {
+  color: var(--color-roles-on-surface-variant);
+}
+
+.versionRowSelected svg {
+  flex-shrink: 0;
+  color: var(--color-roles-primary);
+}
+
+.versionDivider {
+  border: none;
+  border-top: var(--ds-hairline-border);
+  margin: var(--ds-spacing-xs) 0;
+}
+
+.versionFooter {
+  color: var(--color-roles-on-surface-variant);
+  padding: 0 var(--ds-spacing-md) var(--ds-spacing-sm);
+  margin: 0;
+}
+
+.versionUpgradeLink {
+  color: var(--color-roles-primary);
+  text-decoration: underline;
+}
+
+.exportButton {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-spacing-xs);
+}
+
+.rerunButton {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-spacing-xs);
+}
+
+/* ---------- stale banner ---------- */
+.staleBanner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ds-spacing-md);
+  background-color: var(--color-roles-tertiary-container);
+  color: var(--color-roles-on-tertiary-container);
+  padding: var(--ds-spacing-md) var(--ds-spacing-xxl);
+}
+
+.staleBannerText {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-spacing-sm);
+}
+
+.staleBannerLink {
+  color: inherit;
+  text-decoration: underline;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  font: inherit;
+  flex-shrink: 0;
+}
+
+/* ---------- two-column layout ---------- */
+.insightsLayout {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--ds-spacing-xxl);
+  margin-top: var(--ds-spacing-lg);
+}
+
+.insightsNav {
+  position: sticky;
+  top: var(--ds-spacing-lg);
+  align-self: flex-start;
+  flex-shrink: 0;
+  width: 150px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.insightsNavItem {
+  display: block;
+  text-align: left;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: var(--ds-spacing-sm) var(--ds-spacing-md);
+  border-radius: var(--ds-radius-full);
+  color: var(--color-roles-on-surface-variant);
+  text-decoration: none;
+}
+
+.insightsNavItemActive {
+  background-color: var(--color-roles-primary-container);
+  color: var(--color-roles-on-primary-container);
+}
+
+.insightsMain {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-spacing-xxl);
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-spacing-md);
+  scroll-margin-top: var(--ds-spacing-lg);
+}
+
+.sectionHeading {
+  color: var(--color-roles-on-surface);
+  margin: 0;
+}
+
+/* ---------- summary card ---------- */
+.summaryCard {
+  background-color: var(--color-roles-surface);
+  border: var(--ds-hairline-border);
+  border-radius: var(--ds-radius-medium);
+  padding: var(--ds-spacing-lg);
+  color: var(--color-roles-on-surface);
+}
+
+.summaryCard p {
+  margin: 0;
+}
+
+/* ---------- insight cards ---------- */
+.insightCard {
+  background-color: var(--color-roles-surface);
+  border: var(--ds-hairline-border);
+  border-radius: var(--ds-radius-medium);
+  padding: var(--ds-spacing-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-spacing-sm);
+}
+
+/* Paler than the citation chips' own primary-container fill on purpose —
+   full-strength would match the chips exactly and make them disappear
+   against the card. */
+.insightCardStarred {
+  background-color: color-mix(in srgb, var(--color-roles-primary-container) 45%, var(--color-roles-surface));
+  border-color: transparent;
+}
+
+.insightCardHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--ds-spacing-md);
+}
+
+.insightTitleGroup {
+  display: flex;
+  align-items: baseline;
+  gap: var(--ds-spacing-sm);
+}
+
+.insightNumber {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background-color: var(--color-roles-primary-container);
+  color: var(--color-roles-on-primary-container);
+  font-size: 0.75rem;
+}
+
+.insightTitle {
+  color: var(--color-roles-on-surface);
+  margin: 0;
+}
+
+.insightMeta {
+  color: var(--color-roles-on-surface-variant);
+  margin: 0;
+}
+
+.insightDescription {
+  color: var(--color-roles-on-surface);
+  margin: 0;
+}
+
+.insightActions {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--ds-spacing-xs);
+}
+
+.iconGhostButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: none;
+  border: none;
+  border-radius: var(--ds-radius-small);
+  padding: 0;
+  cursor: pointer;
+  color: var(--color-roles-on-surface-variant);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .iconGhostButton:hover {
+    background-color: var(--color-roles-surface-container-low);
+    color: var(--color-roles-on-surface);
+  }
+}
+
+.starButtonActive {
+  color: var(--color-roles-tertiary);
+}
+
+.citationChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ds-spacing-xs);
+}
+
+.citationChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background-color: var(--color-roles-primary-container);
+  color: var(--color-roles-on-primary-container);
+  border: none;
+  border-radius: var(--ds-radius-full);
+  padding: 4px var(--ds-spacing-sm);
+  cursor: pointer;
+  font-size: 0.8125rem;
+}
+
+.citationChipActive {
+  background-color: var(--color-roles-primary);
+  color: var(--color-roles-on-primary);
+}
+
+.emptySectionBox {
+  background-color: var(--color-roles-surface-container-low);
+  border-radius: var(--ds-radius-medium);
+  padding: var(--ds-spacing-xxl);
+  text-align: center;
+  color: var(--color-roles-on-surface-variant);
+}
+
+/* ---------- citation panel ---------- */
+.citationOverlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgb(0 0 0 / 40%);
+  z-index: 20;
+}
+
+.citationPanel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(420px, 100vw);
+  background-color: var(--color-roles-surface);
+  box-shadow: -4px 0 24px rgb(0 0 0 / 15%);
+  z-index: 21;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  padding: var(--ds-spacing-lg);
+  gap: var(--ds-spacing-lg);
+}
+
+.citationPanelHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--ds-spacing-md);
+}
+
+.citationPanelTitle {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-spacing-sm);
+}
+
+.citationPanelTitle svg {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  color: var(--color-roles-on-surface-variant);
+}
+
+.citationPanelFilename {
+  color: var(--color-roles-on-surface);
+  margin: 0;
+}
+
+.citationPanelPage {
+  color: var(--color-roles-on-surface-variant);
+  margin: 0;
+}
+
+.citationSourceChip {
+  align-self: flex-start;
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  background-color: var(--color-roles-primary-container);
+  color: var(--color-roles-on-primary-container);
+  border-radius: var(--ds-radius-full);
+  padding: 4px var(--ds-spacing-md);
+}
+
+.citationBody {
+  color: var(--color-roles-on-surface);
+  line-height: 1.6;
+  margin: 0;
+}
+
+.citationHighlight {
+  background-color: var(--color-roles-tertiary-container);
+}
+
+.citationDivider {
+  border: none;
+  border-top: var(--ds-hairline-border);
+  margin: 0;
+}
+
+.citationOtherLabel {
+  color: var(--color-roles-on-surface-variant);
+  margin: 0 0 var(--ds-spacing-sm) 0;
+}
+
+.citationPanelLoading {
+  color: var(--color-roles-on-surface-variant);
+}
+
+.citationFooter {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-spacing-lg);
+}
+
+.buttonOutlined {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  background: none;
+  cursor: pointer;
+  font-weight: 400;
+  border: 1.5px solid var(--color-roles-primary);
+  color: var(--color-roles-primary);
+  border-radius: var(--ds-radius-medium);
+  padding: var(--ds-spacing-sm) var(--ds-spacing-lg);
+  transition: background-color 0.15s ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .buttonOutlined:hover {
+    background-color: var(--color-roles-primary-container);
+  }
+}
+
+@media (max-width: 720px) {
+  .staleBanner {
+    padding: var(--ds-spacing-md) var(--ds-spacing-lg);
+  }
+
+  .insightsLayout {
+    flex-direction: column;
+  }
+
+  .insightsNav {
+    position: static;
+    flex-direction: row;
+    width: 100%;
+    overflow-x: auto;
+  }
+}
