@@ -52,21 +52,21 @@ enum ChatRole {
 }
 
 model User {
-  id            String        @id @default(cuid())
-  email         String        @unique
+  id            String    @id @default(cuid())
+  email         String    @unique
   emailVerified DateTime?
   passwordHash  String?
   name          String?
   image         String?
-  plan          PlanTier      @default(FREE)
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  plan          PlanTier  @default(FREE)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
-  projects      Project[]
-  subscription  Subscription?
-  usageRecords  UsageRecord[]
-  accounts      Account[]
-  sessions      Session[]
+  projects     Project[]
+  subscription Subscription?
+  usageRecords UsageRecord[]
+  accounts     Account[]
+  sessions     Session[]
 }
 
 // Auth.js standard models
@@ -140,34 +140,34 @@ model Document {
 
   project Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
   chunks  DocumentChunk[]
-
-  @@index([projectId, status])
   // Note: extractedText can be large (full document text). It must be excluded
   // from default Prisma selects on Document (use an explicit `select` that omits
   // it for list/status queries); fetch it explicitly only where needed — the
   // worker (chunking) and the citation panel (surrounding-text lookup).
+
+  @@index([projectId, status])
 }
 
 model DocumentChunk {
-  id         String                       @id @default(cuid())
-  documentId String
-  ordinal    Int
-  content    String
-  charStart  Int
-  charEnd    Int
+  id           String                   @id @default(cuid())
+  documentId   String
+  ordinal      Int
+  content      String
+  charStart    Int
+  charEnd      Int
   pageNumber   Int?
   searchVector Unsupported("tsvector")?
 
   document  Document   @relation(fields: [documentId], references: [id], onDelete: Cascade)
   citations Citation[]
-
-  @@unique([documentId, ordinal])
-  @@index([documentId])
   // Created via raw SQL migration:
   // CREATE INDEX chunk_search_idx ON "DocumentChunk" USING GIN ("searchVector");
   // CREATE TRIGGER chunk_search_update BEFORE INSERT OR UPDATE ON "DocumentChunk"
   //   FOR EACH ROW EXECUTE FUNCTION
   //   tsvector_update_trigger("searchVector", 'pg_catalog.english', content);
+
+  @@unique([documentId, ordinal])
+  @@index([documentId])
 }
 
 model Analysis {
@@ -183,11 +183,30 @@ model Analysis {
   createdAt        DateTime       @default(now())
   completedAt      DateTime?
 
-  project  Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  insights Insight[]
+  project         Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  insights        Insight[]
+  sourceDocuments AnalysisDocument[]
 
   @@unique([projectId, version])
   @@index([projectId, status])
+}
+
+model AnalysisDocument {
+  id         String @id @default(cuid())
+  analysisId String
+  // documentId is intentionally NOT a foreign key into Document. This row
+  // is a snapshot of which document fed this analysis, taken at run time —
+  // it has to survive the source Document being deleted later (that's the
+  // whole point: deleting a document sets the analysis STALE, which this
+  // table is what makes detectable). A real FK with cascade would delete
+  // this row right along with the Document, destroying the evidence.
+  documentId String
+  filename   String
+
+  analysis Analysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+
+  @@index([analysisId])
+  @@index([documentId])
 }
 
 model Insight {
@@ -255,22 +274,22 @@ model Subscription {
 model UsageRecord {
   id        String   @id @default(cuid())
   userId    String
-  kind      String   // "analysis_run" | "chat_message"
+  kind      String // "analysis_run" | "chat_message"
   costUsd   Decimal? @db.Decimal(8, 4)
   createdAt DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId, kind, createdAt])
   // Note: FR-21's monthly quota and FR-31's daily chat cap are enforced by
   // counting UsageRecord rows for the current period via this index at
   // request time. No separate counter/cache table at MVP; revisit only if
   // this query shows up as a bottleneck.
+
+  @@index([userId, kind, createdAt])
 }
 
 model WebhookEvent {
   id         String   @id @default(cuid())
-  provider   String   // "flutterwave"
+  provider   String // "flutterwave"
   txRef      String   @unique
   payload    Json
   processed  Boolean  @default(false)

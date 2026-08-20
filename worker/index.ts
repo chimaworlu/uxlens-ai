@@ -4,6 +4,9 @@
 // process, but a plain `node worker/index.ts` process does not.
 import "dotenv/config";
 import { startEmailWorker } from "./queues/email.ts";
+import { startCleanupWorker } from "./queues/cleanup.ts";
+import { startDocProcessingWorker } from "./queues/doc-processing.ts";
+import { startAnalysisWorker } from "./queues/analysis.ts";
 
 const emailWorker = startEmailWorker();
 
@@ -15,4 +18,34 @@ emailWorker.on("failed", (job, err) => {
   console.error(`[worker] email job ${job?.id ?? "?"} failed:`, err.message);
 });
 
-console.log("[worker] started, listening for jobs on queue: email");
+const cleanupWorker = startCleanupWorker();
+
+cleanupWorker.on("completed", (job) => {
+  console.log(`[worker] cleanup job ${job.id} completed`);
+});
+
+cleanupWorker.on("failed", (job, err) => {
+  console.error(`[worker] cleanup job ${job?.id ?? "?"} failed:`, err.message);
+});
+
+const docProcessingWorker = startDocProcessingWorker();
+
+docProcessingWorker.on("completed", (job) => {
+  console.log(`[worker] doc-processing job ${job.id} completed`);
+});
+
+docProcessingWorker.on("failed", (job, err) => {
+  console.error(`[worker] doc-processing job ${job?.id ?? "?"} failed:`, err.message);
+});
+
+const analysisWorker = startAnalysisWorker();
+
+analysisWorker.on("completed", (job) => {
+  console.log(`[worker] analysis job ${job.id} completed`);
+});
+
+analysisWorker.on("failed", (job, err) => {
+  console.error(`[worker] analysis job ${job?.id ?? "?"} failed:`, err.message);
+});
+
+console.log("[worker] started, listening for jobs on queues: email, cleanup, doc-processing, analysis");
