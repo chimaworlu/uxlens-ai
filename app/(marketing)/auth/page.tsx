@@ -1,6 +1,16 @@
 "use client";
 
-import { Suspense, useEffect, useState, type SubmitEvent } from "react";
+import {
+  Suspense,
+  useEffect,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type ClipboardEvent,
+  type KeyboardEvent,
+  type ReactNode,
+  type SubmitEvent,
+} from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
@@ -249,8 +259,56 @@ function SignUpCard({
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
+  // Optional pre-signup "Verify email" flow (see the two /api/auth/
+  // presignup-verify/* routes) — entirely separate from the required
+  // fields above; the Sign up button's disabled logic below never checks
+  // any of this. verifiedEmail + emailVerificationToken are only used
+  // together, and only when verifiedEmail still equals the current email —
+  // isEmailVerified derives that instead of storing a bare boolean, so
+  // editing the email after verifying silently drops back to unverified
+  // rather than the stale token going anywhere.
+  const [verifiedEmail, setVerifiedEmail] = useState<string | null>(null);
+  const [emailVerificationToken, setEmailVerificationToken] = useState<string | null>(null);
+  const [verifyModalOpen, setVerifyModalOpen] = useState(false);
+  const [sendingCode, setSendingCode] = useState(false);
+  const [verifyLinkError, setVerifyLinkError] = useState<string | null>(null);
+  // Shared between the initial send (below) and the modal's own resend —
+  // both are "a code was sent" events, so both should surface the same
+  // confirmation toast.
+  const [codeSentMessage, setCodeSentMessage] = useState<string | null>(null);
+  const isEmailVerified = verifiedEmail !== null && verifiedEmail === email;
+
   const isFormValid =
     !validateFullName(fullName) && !validateEmail(email) && isPasswordValid(password);
+
+  async function handleVerifyEmailClick() {
+    if (validateEmail(email) || sendingCode) return;
+    setSendingCode(true);
+    setVerifyLinkError(null);
+    try {
+      const response = await fetch("/api/auth/presignup-verify/request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      const data: { error?: string } = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setVerifyLinkError(data.error ?? "Could not send a verification code. Please try again.");
+        return;
+      }
+      setVerifyModalOpen(true);
+      setCodeSentMessage("Confirmation code has been sent");
+    } catch {
+      setVerifyLinkError("Could not send a verification code. Please try again.");
+    } finally {
+      setSendingCode(false);
+    }
+  }
+
+  function handleEmailVerified(token: string) {
+    setVerifiedEmail(email);
+    setEmailVerificationToken(token);
+  }
 
   async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -266,7 +324,12 @@ function SignUpCard({
       const response = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fullName, email, password }),
+        body: JSON.stringify({
+          fullName,
+          email,
+          password,
+          ...(isEmailVerified && emailVerificationToken ? { emailVerificationToken } : {}),
+        }),
       });
       const data: { error?: string } = await response.json();
 
@@ -322,7 +385,28 @@ function SignUpCard({
           onChange={onEmailChange}
           forceShowError={submitAttempted}
           validate={validateEmail}
+          labelAction={
+            isEmailVerified ? (
+              <span className={`${styles.verifiedBadge} ds-label-medium`}>
+                <CheckIcon /> Verified
+              </span>
+            ) : (
+              <button
+                type="button"
+                onClick={handleVerifyEmailClick}
+                disabled={Boolean(validateEmail(email)) || sendingCode}
+                className={`${styles.verifyLink} ds-label-medium ds-focus-ring`}
+              >
+                {sendingCode ? "Sending…" : "Verify email"}
+              </button>
+            )
+          }
         />
+        {verifyLinkError && (
+          <span className={`${styles.errorText} ds-label-medium`} role="alert" aria-live="polite">
+            {verifyLinkError}
+          </span>
+        )}
 
         <PasswordField
           id="signup-password"
@@ -358,8 +442,192 @@ function SignUpCard({
           Sign in
         </button>
       </p>
+
+      {verifyModalOpen && (
+        <PreSignupVerifyModal
+          email={email}
+          onClose={() => setVerifyModalOpen(false)}
+          onVerified={handleEmailVerified}
+          onCodeSent={() => setCodeSentMessage("Confirmation code has been sent")}
+        />
+      )}
+
+      {codeSentMessage && (
+        <Snackbar message={codeSentMessage} onClose={() => setCodeSentMessage(null)} />
+      )}
     </div>
   );
+}
+
+function PreSignupVerifyModal({
+  email,
+  onClose,
+  onVerified,
+  onCodeSent,
+}: {
+  email: string;
+  onClose: () => void;
+  onVerified: (token: string) => void;
+  onCodeSent: () => void;
+}) {
+  const [phase, setPhase] = useState<"enter" | "success">("enter");
+  const [code, setCode] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [secondsLeft, setSecondsLeft] = useState(60);
+  const [resending, setResending] = useState(false);
+
+  useEffect(() => {
+    if (phase !== "enter" || secondsLeft <= 0) return;
+    const timer = setTimeout(() => setSecondsLeft((s) => s - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [phase, secondsLeft]);
+
+  async function handleVerify(event: SubmitEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError(null);
+    setSubmitting(true);
+    try {
+      const response = await fetch("/api/auth/presignup-verify/verify-code", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, code }),
+      });
+      const data: { error?: string; token?: string } = await response.json().catch(() => ({}));
+      if (!response.ok || !data.token) {
+        setError(data.error ?? "Something went wrong. Please try again.");
+        return;
+      }
+      onVerified(data.token);
+      setPhase("success");
+    } catch {
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleResend() {
+    if (secondsLeft > 0 || resending) return;
+    setResending(true);
+    setError(null);
+    try {
+      const response = await fetch("/api/auth/presignup-verify/request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      if (!response.ok) {
+        const data: { error?: string } = await response.json().catch(() => ({}));
+        setError(data.error ?? "Could not resend the code.");
+        return;
+      }
+      setSecondsLeft(60);
+      onCodeSent();
+    } catch {
+      setError("Could not resend the code.");
+    } finally {
+      setResending(false);
+    }
+  }
+
+  return (
+    <div className={styles.modalOverlay} role="presentation" onClick={onClose}>
+      <div
+        // Centered layout only for the success phase — the enter phase
+        // (icon, heading, body, label, input all left-aligned) matches the
+        // reference more closely than this app's other dialogs, which are
+        // all .modalCentered.
+        className={`${styles.card} ${phase === "success" ? styles.modalCentered : ""}`}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="presignup-verify-heading"
+        onClick={(event) => event.stopPropagation()}
+      >
+        {phase === "enter" ? (
+          <>
+            <span className={`${styles.dialogIcon} ${styles.dialogIconInfo}`}>
+              <InfoIcon />
+            </span>
+            <h2 id="presignup-verify-heading" className="ds-title-large">
+              Enter verification code
+            </h2>
+            <p className={`${styles.modalBodyText} ds-body-medium`}>
+              A confirmation code has been sent to your email address at <strong>{email}</strong>.
+            </p>
+
+            <form onSubmit={handleVerify} className={styles.form}>
+              <div className={styles.field}>
+                {/* Not a <label htmlFor>: OtpInput renders six separate
+                    inputs, each with its own aria-label, not one labelable
+                    element a single label could point at. */}
+                <p className="ds-label-large">Enter confirmation code</p>
+                <OtpInput value={code} onChange={setCode} autoFocus />
+              </div>
+
+              {error && (
+                <span className={`${styles.errorText} ds-label-medium`} role="alert" aria-live="polite">
+                  {error}
+                </span>
+              )}
+
+              <div className={styles.resendRow}>
+                <button
+                  type="button"
+                  onClick={handleResend}
+                  disabled={secondsLeft > 0 || resending}
+                  className={`${styles.resendLink} ds-label-medium ds-focus-ring`}
+                >
+                  Resend confirmation code
+                </button>
+                {secondsLeft > 0 && <span className="ds-label-medium">in {formatCountdown(secondsLeft)}</span>}
+              </div>
+
+              <div className={styles.otpActions}>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className={`${styles.buttonSecondary} ds-label-large ds-focus-ring`}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={code.length !== 6 || submitting}
+                  className={`${styles.buttonPrimary} ds-label-large ds-focus-ring`}
+                >
+                  {submitting ? "Verifying…" : "Verify"}
+                </button>
+              </div>
+            </form>
+          </>
+        ) : (
+          <>
+            <span className={styles.verifiedIllustration}>
+              <VerifiedCheckIcon />
+            </span>
+            <h2 className="ds-title-large">Email verified</h2>
+            <p className={`${styles.subtitle} ds-body-medium`}>
+              {email} is now verified. You can continue creating your account.
+            </p>
+            <button
+              type="button"
+              onClick={onClose}
+              className={`${styles.buttonPrimary} ds-label-large ds-focus-ring`}
+            >
+              Continue
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function formatCountdown(totalSeconds: number): string {
+  const minutes = Math.floor(totalSeconds / 60).toString().padStart(2, "0");
+  const seconds = (totalSeconds % 60).toString().padStart(2, "0");
+  return `${minutes}:${seconds}`;
 }
 
 function ResetRequestCard({
@@ -697,6 +965,7 @@ function TextField({
   forceShowError,
   validate,
   autoFocus = false,
+  labelAction,
 }: {
   id: string;
   label: string;
@@ -710,6 +979,11 @@ function TextField({
      empty-field message. */
   validate?: (value: string) => string | null;
   autoFocus?: boolean;
+  // Optional, rendered top-right of the label in its own row — currently
+  // only the sign-up email field uses this (the "Verify email" link /
+  // "Verified" badge). Every other call site leaves this unset and keeps
+  // the plain bare label below, unchanged.
+  labelAction?: ReactNode;
 }) {
   const [touched, setTouched] = useState(false);
   const isEmpty = value.trim() === "";
@@ -722,9 +996,18 @@ function TextField({
 
   return (
     <div className={styles.field}>
-      <label htmlFor={id} className="ds-label-large">
-        {label}
-      </label>
+      {labelAction ? (
+        <div className={styles.labelRow}>
+          <label htmlFor={id} className="ds-label-large">
+            {label}
+          </label>
+          {labelAction}
+        </div>
+      ) : (
+        <label htmlFor={id} className="ds-label-large">
+          {label}
+        </label>
+      )}
       <input
         id={id}
         name={id}
@@ -891,6 +1174,161 @@ function LogoLink() {
   );
 }
 
+// Reused verbatim (structure and behavior) from the account-deletion
+// confirmation flow's own OTP entry (app/(app)/projects/page.tsx) — six
+// individual boxes, not one wide letter-spaced field, is this app's one
+// established OTP pattern; duplicated here rather than imported since it's
+// a page-local component there too, and this app's convention is each
+// page module owning its own UI rather than a shared primitives layer.
+const OTP_LENGTH = 6;
+
+function OtpInput({
+  value,
+  onChange,
+  autoFocus,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  autoFocus?: boolean;
+}) {
+  const boxRefs = useRef<(HTMLInputElement | null)[]>([]);
+
+  function setDigit(index: number, digit: string) {
+    const chars = value.padEnd(OTP_LENGTH, " ").split("");
+    chars[index] = digit;
+    onChange(chars.join("").trimEnd());
+  }
+
+  function handleChange(index: number, event: ChangeEvent<HTMLInputElement>) {
+    const digits = event.target.value.replace(/\D/g, "");
+    if (!digits) {
+      setDigit(index, "");
+      return;
+    }
+    setDigit(index, digits[digits.length - 1] ?? "");
+    if (index < OTP_LENGTH - 1) {
+      boxRefs.current[index + 1]?.focus();
+    }
+  }
+
+  function handleKeyDown(index: number, event: KeyboardEvent<HTMLInputElement>) {
+    if (event.key === "Backspace" && !value[index] && index > 0) {
+      boxRefs.current[index - 1]?.focus();
+    }
+  }
+
+  function handlePaste(event: ClipboardEvent<HTMLInputElement>) {
+    event.preventDefault();
+    const digits = event.clipboardData.getData("text").replace(/\D/g, "").slice(0, OTP_LENGTH);
+    if (!digits) return;
+    onChange(digits);
+    boxRefs.current[Math.min(digits.length, OTP_LENGTH - 1)]?.focus();
+  }
+
+  return (
+    <div className={styles.otpInput}>
+      {Array.from({ length: OTP_LENGTH }, (_, index) => (
+        <input
+          key={index}
+          ref={(el) => {
+            boxRefs.current[index] = el;
+          }}
+          type="text"
+          inputMode="numeric"
+          maxLength={1}
+          value={value[index] ?? ""}
+          onChange={(event) => handleChange(index, event)}
+          onKeyDown={(event) => handleKeyDown(index, event)}
+          onPaste={handlePaste}
+          autoFocus={autoFocus && index === 0}
+          className={`${styles.otpBox} ds-focus-ring`}
+          aria-label={`Digit ${index + 1} of verification code`}
+        />
+      ))}
+    </div>
+  );
+}
+
+// Reused verbatim from app/(app)/projects/page.tsx's Snackbar — same
+// reasoning as OtpInput above.
+function Snackbar({ message, onClose }: { message: string; onClose: () => void }) {
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      onClose();
+    }, 10000);
+
+    return () => window.clearTimeout(timer);
+  }, [onClose]);
+
+  return (
+    <div className={styles.snackbar} role="status" aria-live="polite">
+      <span className={styles.snackbarMessage}>{message}</span>
+      <button
+        type="button"
+        className={`${styles.snackbarClose} ds-focus-ring`}
+        aria-label="Dismiss notification"
+        onClick={onClose}
+      >
+        <CloseIcon />
+      </button>
+    </div>
+  );
+}
+
+
+function CloseIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+      <path d="M2 2l10 10M12 2L2 12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function CheckIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M5 13l4 4L19 7"
+        stroke="currentColor"
+        strokeWidth="2.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function InfoIcon() {
+  return (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M12 11v5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+      <circle cx="12" cy="8" r="1" fill="currentColor" />
+    </svg>
+  );
+}
+
+// Just the checkmark now, no envelope — .verifiedIllustration (the wrapper)
+// is already the solid colored circle, so this only needs to draw the
+// check itself. No lottie-web dependency, no external .json animation
+// asset (the app has neither) — it draws itself in via a plain CSS
+// stroke-dasharray/dashoffset animation (verifiedBadgeCheck in
+// auth.module.css), the same technique most "verified" Lottie animations
+// actually use under the hood.
+function VerifiedCheckIcon() {
+  return (
+    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M6 12.5l4 4 8-9"
+        stroke="currentColor"
+        strokeWidth="3"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className={styles.verifiedBadgeCheck}
+      />
+    </svg>
+  );
+}
 
 function GoogleIcon() {
   return (

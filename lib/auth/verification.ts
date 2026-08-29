@@ -1,7 +1,20 @@
 import { randomBytes } from "node:crypto";
 import { prisma } from "@/lib/db/prisma";
+import type { Prisma } from "@prisma/client";
+
+// Every function below accepts an optional Prisma client, defaulting to the
+// shared singleton — lets callers compose them inside a `$transaction` (the
+// presignup-verify and register routes both need that: consuming a code/
+// token and writing its side effect must succeed or fail together, not as
+// two independent calls that could leave a code spent with nothing to show
+// for it).
+type DbClient = typeof prisma | Prisma.TransactionClient;
 
 const CODE_TTL_MS = 15 * 60 * 1000; // 15 minutes
+// Longer than a code's TTL: this token is issued once the user has already
+// typed a correct code, and just needs to survive them finishing the rest
+// of the sign-up form (name, password) before it's redeemed at register.
+const PROOF_TOKEN_TTL_MS = 30 * 60 * 1000; // 30 minutes
 
 // The one code-generation primitive for every verification code in the
 // app (email verification and password reset alike): pull 32 random bytes
@@ -28,14 +41,14 @@ function generateVerificationCode(): string {
 // possible values — a collision between two different users' codes is rare
 // per attempt but not negligible at scale, so this retries on that specific
 // conflict rather than letting the request fail outright.
-export async function createVerificationCode(email: string): Promise<string> {
-  await prisma.verificationToken.deleteMany({ where: { identifier: email } });
+export async function createVerificationCode(email: string, db: DbClient = prisma): Promise<string> {
+  await db.verificationToken.deleteMany({ where: { identifier: email } });
 
   const MAX_ATTEMPTS = 5;
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     const code = generateVerificationCode();
     try {
-      await prisma.verificationToken.create({
+      await db.verificationToken.create({
         data: {
           identifier: email,
           token: code,
@@ -70,8 +83,12 @@ export type VerifyCodeResult = "verified" | "invalid" | "expired";
 // boundary is consumeVerificationCode below, called again at the point
 // where something irreversible actually happens — never trust a client's
 // earlier "the peek said verified" on its own.
-export async function peekVerificationCode(email: string, code: string): Promise<VerifyCodeResult> {
-  const token = await prisma.verificationToken.findUnique({
+export async function peekVerificationCode(
+  email: string,
+  code: string,
+  db: DbClient = prisma
+): Promise<VerifyCodeResult> {
+  const token = await db.verificationToken.findUnique({
     where: { identifier_token: { identifier: email, token: code } },
   });
 
@@ -87,8 +104,12 @@ export async function peekVerificationCode(email: string, code: string): Promise
 // Single-use: the token row is deleted whenever a matching code is found,
 // whether it turned out to still be valid or had merely expired, so a
 // given code can never be tried again either way.
-export async function consumeVerificationCode(email: string, code: string): Promise<VerifyCodeResult> {
-  const token = await prisma.verificationToken.findUnique({
+export async function consumeVerificationCode(
+  email: string,
+  code: string,
+  db: DbClient = prisma
+): Promise<VerifyCodeResult> {
+  const token = await db.verificationToken.findUnique({
     where: { identifier_token: { identifier: email, token: code } },
   });
 
@@ -96,7 +117,7 @@ export async function consumeVerificationCode(email: string, code: string): Prom
     return "invalid";
   }
 
-  await prisma.verificationToken.delete({
+  await db.verificationToken.delete({
     where: { identifier_token: { identifier: email, token: code } },
   });
 
@@ -105,4 +126,67 @@ export async function consumeVerificationCode(email: string, code: string): Prom
   }
 
   return "verified";
+}
+
+// ---------- pre-signup email proof ----------
+// A second, unrelated use of the same VerificationToken table: once someone
+// mid-signup (no account yet) enters a correct code from the pair above,
+// this hands them a long opaque bearer token proving "this exact email was
+// verified just now" — carried forward client-side and redeemed at
+// register() so the new account can be created already-verified, without
+// register() ever having to trust a bare client-asserted boolean.
+//
+// Namespaced under a "presignup-proof:" prefix (never a bare email) so it
+// can never collide with, or get swept up by, the raw-email-keyed OTP code
+// rows above — createVerificationCode's own cleanup only ever deletes rows
+// whose identifier is exactly the raw email.
+function presignupProofIdentifier(email: string): string {
+  return `presignup-proof:${email}`;
+}
+
+function generateProofToken(): string {
+  return randomBytes(32).toString("hex");
+}
+
+export async function createEmailProofToken(email: string, db: DbClient = prisma): Promise<string> {
+  const identifier = presignupProofIdentifier(email);
+  await db.verificationToken.deleteMany({ where: { identifier } });
+
+  const MAX_ATTEMPTS = 5;
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    const token = generateProofToken();
+    try {
+      await db.verificationToken.create({
+        data: { identifier, token, expires: new Date(Date.now() + PROOF_TOKEN_TTL_MS) },
+      });
+      return token;
+    } catch (error) {
+      const isUniqueConflict =
+        error instanceof Error && "code" in error && error.code === "P2002";
+      if (!isUniqueConflict || attempt === MAX_ATTEMPTS) {
+        throw error;
+      }
+    }
+  }
+
+  throw new Error("Could not generate a unique email verification token.");
+}
+
+// Single-use, same as consumeVerificationCode — returns false (rather than
+// a three-way result) since the only caller, register(), treats "missing",
+// "wrong", and "expired" identically: proceed with an unverified account
+// either way, never a hard failure over a stale/absent token.
+export async function consumeEmailProofToken(
+  email: string,
+  token: string,
+  db: DbClient = prisma
+): Promise<boolean> {
+  const identifier = presignupProofIdentifier(email);
+  const row = await db.verificationToken.findUnique({
+    where: { identifier_token: { identifier, token } },
+  });
+  if (!row) return false;
+
+  await db.verificationToken.delete({ where: { identifier_token: { identifier, token } } });
+  return row.expires >= new Date();
 }
