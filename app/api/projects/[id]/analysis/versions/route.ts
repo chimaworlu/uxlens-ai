@@ -3,9 +3,9 @@ import { prisma } from "@/lib/db/prisma";
 import { getSessionUserId } from "@/lib/auth/session";
 
 // FR-20: version dropdown on the Insights view. Free keeps only the latest
-// version (older ones are pruned by the daily cleanup job), so this list
-// is short for Free and up to 5 entries for Pro — the route itself doesn't
-// care which, it just returns whatever rows still exist.
+// version, Pro up to 5 — enforced by lib/quota/checks.ts's
+// pruneAnalysisVersions right after each run completes, not here. This
+// route just returns whatever rows are still around.
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }

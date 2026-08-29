@@ -18,7 +18,7 @@ trigger: always_on
 
 ## Branches and PRs
 
-- Branch names reference the task or FR they implement (e.g. `fr-19-citation-verification`, `fr-33-flutterwave-checkout`) so it's obvious from the branch list what's in flight.
+- Branch names reference the task or FR they implement (e.g. `fr-19-citation-verification`, `fr-33-paystack-checkout`) so it's obvious from the branch list what's in flight.
 - A PR description lists the FR/rule numbers it addresses and explicitly states which `AGENTS.md` Section 3 rules were relevant and how they were satisfied — this is not bureaucracy, it's the paper trail that lets a human verify a rule wasn't quietly broken.
 - Migrations (see `database-schema.md`) are their own reviewable diff within the PR, never buried inside an unrelated feature commit.
 

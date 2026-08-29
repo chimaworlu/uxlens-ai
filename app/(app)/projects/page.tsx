@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  useCallback,
   useEffect,
   useRef,
   useState,
@@ -10,6 +11,7 @@ import {
   type SubmitEvent,
 } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import styles from "./dashboard.module.css";
 
 type Status = "loading" | "ready" | "error";
@@ -26,6 +28,7 @@ type Project = {
 };
 
 export default function DashboardPage() {
+  const router = useRouter();
   const [status, setStatus] = useState<Status>("loading");
   const [name, setName] = useState<string | null>(null);
   const [email, setEmail] = useState("");
@@ -34,11 +37,12 @@ export default function DashboardPage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showCapModal, setShowCapModal] = useState(false);
+  const [showUpgradeFeaturesModal, setShowUpgradeFeaturesModal] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Project | null>(null);
   const [snackbarMessage, setSnackbarMessage] = useState<string | null>(null);
 
-  useEffect(() => {
-    Promise.all([
+  const loadDashboard = useCallback(() => {
+    return Promise.all([
       fetch("/api/users/status").then((response) => {
         if (!response.ok) throw new Error("Could not load account.");
         return response.json() as Promise<{
@@ -52,16 +56,53 @@ export default function DashboardPage() {
         if (!response.ok) throw new Error("Could not load projects.");
         return response.json() as Promise<{ projects: Project[] }>;
       }),
-    ])
-      .then(([userData, projectsData]) => {
-        setName(userData.name);
-        setEmail(userData.email);
-        setVerified(userData.verified);
-        setProjectLimit(userData.projectLimit);
-        setProjects(projectsData.projects);
-        setStatus("ready");
-      })
+    ]).then(([userData, projectsData]) => {
+      setName(userData.name);
+      setEmail(userData.email);
+      setVerified(userData.verified);
+      setProjectLimit(userData.projectLimit);
+      setProjects(projectsData.projects);
+    });
+  }, []);
+
+  useEffect(() => {
+    loadDashboard()
+      .then(() => setStatus("ready"))
       .catch(() => setStatus("error"));
+  }, [loadDashboard]);
+
+  // Paystack redirects back here with ?reference=...&trxref=... after
+  // checkout (see /api/billing/checkout's callbackUrl) — this is the
+  // primary confirmation path, not just a UX nicety: relying on the
+  // webhook alone means Pro only ever activates once a public webhook URL
+  // is registered (ngrok in dev, a real domain in prod), which is exactly
+  // the gap that left a real payment not reflected in the app.
+  useEffect(() => {
+    const reference = new URLSearchParams(window.location.search).get("reference");
+    if (!reference) return;
+
+    // Strip the query params immediately so a refresh doesn't re-trigger
+    // this (the backend is idempotent either way, but there's no reason
+    // to re-hit it every reload).
+    router.replace("/projects", { scroll: false });
+
+    fetch("/api/billing/verify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ reference }),
+    })
+      .then((response) => response.json() as Promise<{ activated?: boolean; error?: string }>)
+      .then((result) => {
+        if (result.activated) {
+          setSnackbarMessage("You're now on the Pro plan!");
+          loadDashboard().catch(() => {});
+        }
+      })
+      .catch(() => {});
+    // Runs once on mount only — reference comes from the URL Paystack
+    // redirected to, not from any state that changes during the page's
+    // lifetime.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function handleProjectCreated(project: Project) {
@@ -76,7 +117,15 @@ export default function DashboardPage() {
 
   function handleNewProjectClick() {
     if (projects.length >= projectLimit) {
-      setShowCapModal(true);
+      // Free plan at cap: skip straight to the Pro features modal instead
+      // of an intermediate "you've reached your limit" step — Pro plan at
+      // cap has nothing to upgrade into, so it keeps the plain
+      // ProjectCapModal ("delete a project to free up space").
+      if (projectLimit > 3) {
+        setShowCapModal(true);
+      } else {
+        setShowUpgradeFeaturesModal(true);
+      }
     } else {
       setShowCreateModal(true);
     }
@@ -201,8 +250,10 @@ export default function DashboardPage() {
         />
       )}
 
-      {showCapModal && (
-        <ProjectCapModal isPro={projectLimit > 3} onClose={() => setShowCapModal(false)} />
+      {showCapModal && <ProjectCapModal onClose={() => setShowCapModal(false)} />}
+
+      {showUpgradeFeaturesModal && (
+        <UpgradeFeaturesModal onClose={() => setShowUpgradeFeaturesModal(false)} />
       )}
 
       {deleteTarget && (
@@ -457,7 +508,10 @@ function ProjectCard({
   );
 }
 
-function ProjectCapModal({ isPro, onClose }: { isPro: boolean; onClose: () => void }) {
+// Only ever reached on the Pro plan now — a Free-plan user at cap goes
+// straight to UpgradeFeaturesModal (see handleNewProjectClick) instead of
+// this intermediate step, since there's no "upgrade" path to offer here.
+function ProjectCapModal({ onClose }: { onClose: () => void }) {
   return (
     <div className={styles.modalOverlay} role="presentation" onClick={onClose}>
       <div
@@ -484,16 +538,10 @@ function ProjectCapModal({ isPro, onClose }: { isPro: boolean; onClose: () => vo
           You&apos;ve reached your project limit
         </h2>
         <p className={`${styles.modalBodyText} ds-body-medium`}>
-          {isPro
-            ? "You've used all of your plan's active project slots. Delete a project to free up space."
-            : "Free plan includes 1 active project. Upgrade to Pro for up to 15 active projects, so you can keep every research project running at once."}
+          You&apos;ve used all of your plan&apos;s active project slots. Delete a project to free up
+          space.
         </p>
 
-        {!isPro && (
-          <Link href="/billing" className={`${styles.buttonPrimary} ds-label-large ds-focus-ring`}>
-            Upgrade to Pro
-          </Link>
-        )}
         <button
           type="button"
           onClick={onClose}
@@ -505,6 +553,101 @@ function ProjectCapModal({ isPro, onClose }: { isPro: boolean; onClose: () => vo
     </div>
   );
 }
+
+function UpgradeFeaturesModal({ onClose }: { onClose: () => void }) {
+  const [upgrading, setUpgrading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleContinue() {
+    setUpgrading(true);
+    setError(null);
+    try {
+      const response = await fetch("/api/billing/checkout", { method: "POST" });
+      const result: { link?: string; error?: string } = await response.json();
+      if (!response.ok || !result.link) {
+        setError(result.error ?? "Couldn't start checkout. Please try again.");
+        setUpgrading(false);
+        return;
+      }
+      window.location.href = result.link;
+    } catch {
+      setError("Couldn't start checkout. Please try again.");
+      setUpgrading(false);
+    }
+  }
+
+  return (
+    <div className={styles.modalOverlay} role="presentation" onClick={onClose}>
+      <div
+        className={`${styles.modal} ${styles.modalCentered}`}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="upgrade-features-heading"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <button
+          type="button"
+          onClick={onClose}
+          className={`${styles.dialogCloseButton} ds-focus-ring`}
+          aria-label="Close"
+        >
+          <CloseIcon />
+        </button>
+
+        <span className={`${styles.dialogIcon} ${styles.dialogIconPrimary}`}>
+          <StarIcon />
+        </span>
+
+        <h2 id="upgrade-features-heading" className="ds-title-large">
+          Upgrade to Pro
+        </h2>
+        <p className={`${styles.modalBodyText} ds-body-medium`}>
+          ₦3,000/month. Cancel anytime, no email required.
+        </p>
+
+        <ul className={styles.featureList}>
+          {PRO_FEATURES.map((feature) => (
+            <li key={feature} className={styles.featureItem}>
+              <CheckIcon />
+              <span className="ds-body-medium">{feature}</span>
+            </li>
+          ))}
+        </ul>
+
+        {error && (
+          <span className={`${styles.errorText} ds-label-medium`} role="alert">
+            {error}
+          </span>
+        )}
+
+        <button
+          type="button"
+          onClick={handleContinue}
+          disabled={upgrading}
+          className={`${styles.buttonPrimary} ds-label-large ds-focus-ring`}
+        >
+          {upgrading ? "Redirecting…" : "Continue"}
+        </button>
+        <button
+          type="button"
+          onClick={onClose}
+          disabled={upgrading}
+          className={`${styles.buttonSecondary} ds-label-large ds-focus-ring`}
+        >
+          Maybe later
+        </button>
+      </div>
+    </div>
+  );
+}
+
+const PRO_FEATURES = [
+  "15 active projects",
+  "30 analysis runs a month",
+  "500 chat messages a day",
+  "500 MB storage per project",
+  "Keep up to 5 analysis versions",
+];
 
 function DeleteProjectModal({
   project,
@@ -1016,6 +1159,33 @@ function LockIcon() {
         strokeLinecap="round"
       />
       <circle cx="12" cy="15.5" r="1.3" fill="currentColor" />
+    </svg>
+  );
+}
+
+function StarIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M12 3.5l2.47 5.18 5.53.68-4.06 3.86 1.1 5.6L12 15.9l-4.94 2.92 1.1-5.6-4.06-3.86 5.53-.68L12 3.5z"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function CheckIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M5 12.5l4.5 4.5L19 7"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }

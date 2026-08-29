@@ -67,6 +67,7 @@ model User {
   usageRecords UsageRecord[]
   accounts     Account[]
   sessions     Session[]
+  paymentLogs  PaymentLog[]
 }
 
 // Auth.js standard models
@@ -258,15 +259,22 @@ model ChatMessage {
 }
 
 model Subscription {
-  id                    String             @id @default(cuid())
-  userId                String             @unique
-  status                SubscriptionStatus
-  flutterwavePlanId     String
-  flutterwaveCustomerId String?
-  currentPeriodEnd      DateTime
-  cancelAtPeriodEnd     Boolean            @default(false)
-  createdAt             DateTime           @default(now())
-  updatedAt             DateTime           @updatedAt
+  id                       String             @id @default(cuid())
+  userId                   String             @unique
+  status                   SubscriptionStatus
+  paystackPlanCode         String
+  paystackCustomerCode     String?
+  // Paystack's disable-subscription endpoint needs BOTH of these together
+  // (unlike the previous Flutterwave integration's single numeric id) —
+  // added for the same reason the Flutterwave fields were: FR-35's
+  // self-serve cancel can't be built without them. Nullable: unset until
+  // the first successful charge webhook populates them.
+  paystackSubscriptionCode String?
+  paystackEmailToken       String?
+  currentPeriodEnd         DateTime
+  cancelAtPeriodEnd        Boolean            @default(false)
+  createdAt                DateTime           @default(now())
+  updatedAt                DateTime           @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
@@ -289,9 +297,71 @@ model UsageRecord {
 
 model WebhookEvent {
   id         String   @id @default(cuid())
-  provider   String // "flutterwave"
+  provider   String // "paystack"
   txRef      String   @unique
   payload    Json
   processed  Boolean  @default(false)
   receivedAt DateTime @default(now())
+}
+
+// The trusted, append-only audit trail of every payment-related event this
+// app has ever seen for every transaction — not just the ones that
+// succeeded. Distinct from WebhookEvent, which exists purely for webhook
+// delivery idempotency (one row per txRef, updated in place). PaymentLog
+// takes one new row per event, keyed loosely: a single reference can (and
+// normally does) accumulate several rows over its lifetime — checkout
+// initiated, a redirect-verify call, a webhook delivery — so this table can
+// answer "what did Paystack actually tell us, and when" independent of
+// whatever Subscription/User.plan currently say. Nothing here is ever
+// updated or deleted after insert.
+model PaymentLog {
+  id     String  @id @default(cuid())
+  userId String?
+  // "paystack" — kept as a column rather than assumed, same reasoning as
+  // WebhookEvent.provider, in case a second provider is ever added.
+  provider String
+  // Where this event was observed: "checkout" (link created, not yet
+  // paid), "webhook" (Paystack's server calling ours), or "verify" (the
+  // checkout-redirect confirmation path in app/api/billing/verify).
+  source String
+  // Paystack's own event name for webhook rows (e.g. "charge.success"),
+  // or a route-defined label for the other two sources (e.g.
+  // "checkout.initiated", "checkout.verify").
+  event String
+  // Paystack's transaction reference. Not unique here on purpose — see the
+  // model comment above.
+  reference String
+  // Paystack's transaction status ("success", "failed", "abandoned", ...)
+  // when one was actually returned, or a rejection reason coined by our
+  // own route when it wasn't ("signature_invalid", "invalid_payload",
+  // "customer_mismatch", "verify_api_error", "duplicate").
+  status           String
+  amountKobo       Int?
+  currency         String?
+  customerEmail    String?
+  planCode         String?
+  subscriptionCode String?
+  // Webhook rows only: whether x-paystack-signature checked out. Null for
+  // "checkout"/"verify" rows — there's no signature in either path (verify
+  // authenticates via session + a live Paystack API round-trip instead).
+  signatureValid Boolean?
+  // Whether this specific event is what triggered
+  // activateProSubscription — lets a reconciliation query find exactly the
+  // row that turned a user's plan on, not just that it eventually did.
+  activated Boolean @default(false)
+  // Set on a rejected or failed attempt (bad signature, API error,
+  // customer mismatch, etc.); null on a normal successful entry.
+  errorMessage String?
+  // Full provider payload/response for this event, verbatim, for manual
+  // reconciliation against Paystack's own dashboard. Nullable only for the
+  // rare case an attempt was rejected before any payload existed to store
+  // (e.g. a Paystack API call that errored out with no response body).
+  rawPayload Json?
+  createdAt  DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([reference])
+  @@index([userId])
+  @@index([createdAt])
 }

@@ -50,6 +50,14 @@
     width: 100%;
   }
 
+  /* Verify drops onto its own full-width row below the heading here, so
+     the +5px desktop offset (centering against the heading+subtext block
+     next to Verify) no longer applies — back to lining up with just the
+     heading's top edge. */
+  .dismissButton {
+    top: var(--ds-spacing-lg);
+  }
+
   .modalOverlay {
     padding: var(--ds-spacing-md);
     align-items: flex-end;
@@ -215,11 +223,11 @@
 
 .bannerHeaderRow {
   display: flex;
-  /* flex-start, not center: Verify's top edge should line up with the
-     heading's top edge (and, in turn, with the dismiss button's fixed top
-     offset below) — centering against the full two-line heading+subtext
-     block would put it lower than a top-anchored dismiss button. */
-  align-items: flex-start;
+  /* center, not flex-start: Verify should sit centered against the full
+     two-line heading+subtext block (matching the icon badge beside it),
+     not pinned to just the heading's top edge — see .dismissButton's own
+     offset below, tuned to land on this same center line. */
+  align-items: center;
   justify-content: space-between;
   gap: var(--ds-spacing-md);
   flex-wrap: wrap;
@@ -253,18 +261,27 @@
 /* Pinned to the card's corner rather than laid out alongside the heading/
    Verify button: those wrap onto their own line at narrow widths (see the
    mobile breakpoint below), and a flex sibling in that row would wrap —
-   and visually drift — right along with them. The fixed top/right offset
-   here matches .banner's own padding exactly, so it lines up with where
-   the heading row actually starts. */
+   and visually drift — right along with them.
+
+   32px, not an arbitrary icon-button size: .verifyButton's own box (21px
+   ds-label-large line-height + 2 * 4px padding + 2 * 1.5px border) also
+   renders at 32px tall, so the two share a size instead of one dwarfing
+   the other.
+
+   top offset: .bannerHeaderRow now centers Verify against the full
+   heading+subtext block (21px + 21px line-heights = 42px), which puts
+   Verify's own center 5px below the block's top ((42 - 32) / 2). Adding
+   that same 5px to .banner's padding lands this button's center on that
+   identical line, instead of both just sharing a top edge. */
 .dismissButton {
   position: absolute;
-  top: var(--ds-spacing-lg);
+  top: calc(var(--ds-spacing-lg) + 5px);
   right: var(--ds-spacing-lg);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   background: none;
   border: 1px solid transparent;
   border-radius: var(--ds-radius-small);
@@ -711,6 +728,35 @@
 .dialogIconWarning {
   background-color: var(--color-roles-tertiary-container);
   color: var(--color-roles-on-tertiary-container);
+}
+
+.dialogIconPrimary {
+  background-color: var(--color-roles-primary-container);
+  color: var(--color-roles-on-primary-container);
+}
+
+/* ---------- upgrade-to-pro feature list ---------- */
+.featureList {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-spacing-sm);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  text-align: left;
+}
+
+.featureItem {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-spacing-sm);
+  color: var(--color-roles-on-surface);
+}
+
+.featureItem svg {
+  flex-shrink: 0;
+  color: var(--color-roles-primary);
 }
 
 /* Pinned to the modal's corner independently of the icon below — the icon

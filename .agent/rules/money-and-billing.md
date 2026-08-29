@@ -8,7 +8,7 @@ This file is the single place every money-related rule lives. If you're touching
 
 ## Currency
 
-- NGN is the only currency, everywhere in the product: pricing table, checkout, billing page, invoices, receipts. No USD price, symbol, or conversion display anywhere in the UI or an API response, at MVP. International cards may pay in NGN via Flutterwave — there is no USD-denominated path. *(NG-7)*
+- NGN is the only currency, everywhere in the product: pricing table, checkout, billing page, invoices, receipts. No USD price, symbol, or conversion display anywhere in the UI or an API response, at MVP. International cards may pay in NGN via Paystack — there is no USD-denominated path. *(NG-7)*
 - Internal cost tracking (`Analysis.costUsd`, `UsageRecord.costUsd`, the $0.20 target in G-4) is in USD because that's the currency AI providers bill in — this is an internal metric, never surfaced to the user, and does not conflict with the NGN-only rule above.
 - All monetary values in the database are `Decimal`, never `Float`. Floating-point rounding error in a cost or price field is not an acceptable tradeoff for convenience.
 
@@ -36,13 +36,15 @@ This file is the single place every money-related rule lives. If you're touching
 - Every user has a per-day AI spend ceiling of $2 (tracked from `UsageRecord.costUsd`). If a user's usage would cross this ceiling, AI features pause for that user with a clear, friendly message — this is a hard backstop independent of their plan's stated quotas, because quotas assume normal usage patterns and this ceiling protects against the abnormal ones.
 - Never remove, raise, or bypass this ceiling to "let a task complete" during development or testing — test against it, don't work around it.
 
-## Billing (Flutterwave)
+## Billing (Paystack)
 
-- Checkout, recurring charges, and payment plans go through Flutterwave's Payment Plans API. No other payment provider is called, and no payment logic is hand-rolled outside what Flutterwave's API and webhooks provide.
-- The webhook handler verifies the Flutterwave signature (`verif-hash`) before acting on any payload, and is idempotent by transaction reference (`txRef`) — the same event must never be processed twice, whether that's activating a subscription twice or downgrading a user twice.
+- Checkout, recurring charges, and plans go through Paystack's Plan/Subscription API. No other payment provider is called, and no payment logic is hand-rolled outside what Paystack's API and webhooks provide.
+- The webhook handler verifies the Paystack signature (`x-paystack-signature`, a computed HMAC-SHA512 of the raw request body, keyed with the secret key) before acting on any payload, and is idempotent by transaction reference (`txRef`) — the same event must never be processed twice, whether that's activating a subscription twice or downgrading a user twice.
+- Every payment event — from checkout initiation through webhook delivery and the checkout-redirect verify call, success or failure — is written to `PaymentLog` (`lib/billing/payment-log.ts`). This is the most trusted layer: an append-only audit trail independent of `Subscription`/`User.plan`, meant for reconciling against Paystack's own dashboard if application state ever looks wrong. Never skip logging a rejected or failed attempt just because nothing was activated — the gaps are exactly what this table exists to make visible.
 - A failed charge starts a 5-day grace period, not an immediate downgrade. The grace period must actually end: the daily `billing-enforcement` cleanup job downgrades any subscription that has been `PAST_DUE` for more than 5 days. A grace period with no job to close it is a bug that looks like generosity but is actually a permanently-free Pro account.
 - Downgrade never deletes data. Projects over the free cap become read-only (upload and analysis disabled); chat remains available within the free tier's daily cap. The only ways data is ever deleted are explicit user actions — document delete, project delete with typed confirmation, or account deletion. A billing state change is never, by itself, a deletion trigger.
 - Cancellation is self-serve from the billing page, takes effect at period end, and requires no email or support interaction to complete.
+- `activateProSubscription` (`lib/billing/subscription.ts`) anchors a new `currentPeriodEnd` to `max(existing currentPeriodEnd, now)`, never plain `now`. This is only correct-by-accident if skipped: an on-time renewal's `charge.success` webhook fires on Paystack's own schedule, not on ours, so anchoring to wall-clock "now" instead of the subscription's actual paid-through date silently drifts `currentPeriodEnd` by however long the webhook was delayed — and that drift compounds every renewal. First-time activation and PAST_DUE recovery both still resolve to `now` under this rule (there's no later existing date to anchor to), so nothing about those two cases changes.
 - Account deletion cancels any active Pro subscription immediately, as part of the same action. This is distinct from a normal user-initiated cancellation and does not go through the standard grace period.
 
 ## Pricing changes and FX

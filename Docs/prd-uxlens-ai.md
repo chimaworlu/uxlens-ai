@@ -6,7 +6,7 @@ Brand name confirmed by the founder: UXLens AI.
 
 UXLens AI is a web application that turns raw UX research documents into structured, citable insights. A product designer creates a project, uploads interview notes, survey exports, and customer feedback (PDF, DOCX, TXT, CSV), and triggers an analysis. The system extracts text, runs a multi-pass AI pipeline (DeepSeek confirmed for all passes; Claude optional as an upgrade for synthesis and chat, see Section 6), and produces: a project summary, ranked recurring themes, pain points, and user suggestions. Every output is linked to the exact source snippet it came from, and clicking a citation reveals the original text. A project-scoped chat lets the designer interrogate the research; answers are grounded in the uploaded documents, and any general UX knowledge the AI adds is visually labeled as such.
 
-The product is single-user at MVP, freemium (2 analyses/month free, paid tier via Flutterwave, NGN only per NG-7), English-only, and built on Next.js (App Router), TypeScript, Prisma, PostgreSQL, BullMQ + Redis, and Cloudflare R2. It serves a dual purpose: a real revenue product and a flagship portfolio piece, so the MVP must be polished enough to demo end-to-end (a public, no-signup demo, see FR-37), not just functional.
+The product is single-user at MVP, freemium (2 analyses/month free, paid tier via Paystack, NGN only per NG-7), English-only, and built on Next.js (App Router), TypeScript, Prisma, PostgreSQL, BullMQ + Redis, and Cloudflare R2. It serves a dual purpose: a real revenue product and a flagship portfolio piece, so the MVP must be polished enough to demo end-to-end (a public, no-signup demo, see FR-37), not just functional.
 
 ## 2. Problem Statement
 
@@ -30,7 +30,7 @@ Generic AI chatbots don't solve this because (a) they lose track of which docume
 - NG-4: No non-English document analysis.
 - NG-5: No integrations (Notion, Dovetail, Figma, Zoom). Upload only.
 - NG-6: No fine-tuning or custom models. Prompted API calls only.
-- NG-7: No multi-currency billing at MVP. Pricing is NGN only; international cards may pay in NGN via Flutterwave but no USD price is offered. USD/Stripe is the Phase 3 path (see R-4).
+- NG-7: No multi-currency billing at MVP. Pricing is NGN only; international cards may pay in NGN via Paystack but no USD price is offered. USD/Stripe is the Phase 3 path (see R-4).
 
 ## 4. User Personas
 
@@ -109,8 +109,8 @@ Generic AI chatbots don't solve this because (a) they lose track of which docume
 - FR-32: Users can clear a project's chat history (soft delete, hard-deleted after 30 days).
 
 ### Billing
-- FR-33: Flutterwave subscription checkout for the Pro plan, priced in Naira (NGN), card + bank transfer options as supported by Flutterwave in the user's region. Payment plan created via Flutterwave Payment Plans API; recurring charges handled by Flutterwave.
-- FR-34: Webhook endpoint verifies Flutterwave signatures (verif-hash header), is idempotent by transaction reference, and handles: successful charge (activate/extend), failed charge (grace period 5 days, then downgrade), cancellation (downgrade at period end).
+- FR-33: Paystack subscription checkout for the Pro plan, priced in Naira (NGN), card + bank transfer + USSD options as supported by Paystack in the user's region. Plan created via Paystack's Plan API; recurring charges handled by Paystack.
+- FR-34: Webhook endpoint verifies Paystack signatures (`x-paystack-signature` header, a computed HMAC-SHA512 of the raw request body), is idempotent by transaction reference, and handles: successful charge (activate/extend), failed charge (grace period 5 days, then downgrade), cancellation (downgrade at period end).
 - FR-35: Billing page shows current plan, usage meters (analyses used/limit, chat messages today/limit, projects, storage), next billing date, and cancel button. Cancellation is self-serve, no email required.
 - FR-36: Downgrade behavior: projects over the free cap become read-only (viewable, not analyzable — upload and analysis disabled) rather than deleted. Chat remains available on read-only projects within the free tier's daily chat cap (FR-31), since it costs little and is the strongest re-upgrade pull. Nothing is ever deleted by a downgrade.
 
@@ -182,8 +182,8 @@ Provider split: DeepSeek (`deepseek-chat`) is confirmed for all passes — extra
 | /api/analyses/:id/export | GET | PDF export |
 | /api/projects/:id/chat | POST | ask question (SSE stream) |
 | /api/projects/:id/chat/history | GET, DELETE | fetch/clear history |
-| /api/billing/checkout | POST | create Flutterwave payment link |
-| /api/billing/webhook | POST | Flutterwave webhook (signature-verified) |
+| /api/billing/checkout | POST | create Paystack payment link |
+| /api/billing/webhook | POST | Paystack webhook (signature-verified) |
 | /api/billing/portal | GET | plan + usage summary |
 | /api/demo | GET | public read-only seeded demo project (FR-37), no auth |
 
@@ -221,7 +221,7 @@ Purpose is dual (revenue + portfolio), so pricing is real but deliberately simpl
 | Analysis version history | last 1 | last 5 |
 | PDF export | ✅ | ✅ |
 
-- Payments: Flutterwave Payment Plans (monthly recurring, NGN). [ASSUMPTION] ₦3,000/mo (≈ $2.17 at ~₦1,380/$, July 2026); validate against Nigerian designer willingness-to-pay before launch and revisit after 50 paying users. Price is reviewed quarterly against the NGN/USD rate (see R-8).
+- Payments: Paystack Plans/Subscriptions (monthly recurring, NGN). [ASSUMPTION] ₦3,000/mo (≈ $2.17 at ~₦1,380/$, July 2026); validate against Nigerian designer willingness-to-pay before launch and revisit after 50 paying users. Price is reviewed quarterly against the NGN/USD rate (see R-8).
 - Upgrade triggers (in-product): hitting the analysis quota (strongest intent moment — show upgrade modal with the exact insight they're blocked from generating), hitting the project cap, hitting daily chat cap, storage cap at upload.
 - Unit economics check: revenue is in NGN but AI costs are in USD. At ~₦1,380/$ (July 2026), ₦3,000 ≈ $2.17. Pro user worst case = 30 analyses × $0.13 + heavy chat ≈ $5.00 AI cost against ~$2.17 revenue — **a loss of ≈ $2.83/user; worst-case AI cost is ≈ 230% of revenue.** Median expected usage (8 analyses/mo) ≈ $1.20 AI cost against ~$2.17 revenue (≈ 45% margin), but that puts median-usage AI cost at ≈ 55% of revenue, within a few points of the 60%-of-Pro-revenue trigger in R-8 that calls for a price raise or lower analysis cap — at *median* usage, not only the extreme. **[FLAG] At ₦15,000/month this margin held at the extreme; at ₦3,000/month it does not — it's negative at the extreme and thin even at median.** This is a structural change from the prior price point, not a rounding difference, and the existing mitigations (run cap, M-10 monitoring, quarterly review) were sized against the old price's much larger cushion. Recommend revisiting the price, the Pro analysis-run cap (currently 30/month), or both before this ships, rather than waiting for the quarterly review to catch an already-underwater price.
 - Portfolio requirement: public landing page with live demo project (read-only, seeded data) so recruiters and clients can try the product without signing up.
@@ -231,7 +231,7 @@ Purpose is dual (revenue + portfolio), so pricing is real but deliberately simpl
 - R-1 **Hallucinated insights destroy trust.** Mitigation: Pass C citation verification is code, not AI; unverifiable insights are dropped (FR-19); drop rate is a tracked metric with alerting above 15%.
 - R-2 **Scanned/image PDFs fail extraction and feel like product breakage.** Mitigation: detect low text density, fail fast with a specific, honest message (FR-11); OCR is a named Phase 2 item.
 - R-3 **AI cost blowout from abusive or extreme usage.** Mitigation: hard caps at every layer (file size, doc count, run quota, chat quota, burst limits), per-user daily AI spend ceiling ($2/day) that pauses AI features with a friendly message, cost logged per job.
-- R-4 **Flutterwave recurring billing edge cases (failed renewals, currency issues on international cards).** Mitigation: 5-day grace period, webhook idempotency, downgrade-not-delete policy (FR-36), manual reconciliation dashboard query in week one; keep Stripe as a documented fallback in Phase 3 if international card failure rate exceeds 10%.
+- R-4 **Paystack recurring billing edge cases (failed renewals, currency issues on international cards).** Mitigation: 5-day grace period, webhook idempotency, downgrade-not-delete policy (FR-36), manual reconciliation dashboard query in week one; keep Stripe as a documented fallback in Phase 3 if international card failure rate exceeds 10%.
 - R-5 **Privacy: users upload participant PII.** Mitigation: upload warning (FR-12), private bucket, presigned short-lived URLs, hard delete on request, no-training commitment in ToS; automated redaction is Phase 3.
 - R-6 **Provider dependency (DeepSeek availability/quality drift), since DeepSeek is the confirmed processor for the entire pipeline.** Mitigation: provider layer behind a single interface so any pass can switch providers (e.g. to Claude, already wired as the optional path per Section 6) with a config change, not a rewrite; per-pass eval set (20 golden documents) run weekly against whichever provider is active.
 - R-7 **Single founder bandwidth (design + build + support).** Mitigation: MVP scope is intentionally narrow (see Non-Goals); support via a single shared inbox; status page.
@@ -488,8 +488,8 @@ model Subscription {
   id                    String             @id @default(cuid())
   userId                String             @unique
   status                SubscriptionStatus
-  flutterwavePlanId     String
-  flutterwaveCustomerId String?
+  paystackPlanCode      String
+  paystackCustomerCode  String?
   currentPeriodEnd      DateTime
   cancelAtPeriodEnd     Boolean            @default(false)
   createdAt             DateTime           @default(now())
@@ -516,7 +516,7 @@ model UsageRecord {
 
 model WebhookEvent {
   id         String   @id @default(cuid())
-  provider   String   // "flutterwave"
+  provider   String   // "paystack"
   txRef      String   @unique
   payload    Json
   processed  Boolean  @default(false)
@@ -568,14 +568,14 @@ All assumptions added by this PRD beyond the prompt, consolidated:
 ## 13. Phased Roadmap
 
 ### Phase 1 — MVP (weeks 1–8): "Upload → cited insights → chat"
-Ships: auth, projects, upload (4 formats), full analysis pipeline with citation verification, insights view, grounded chat, PDF export, free tier limits, Flutterwave Pro checkout, public demo mode (FR-37), analytics instrumentation.
+Ships: auth, projects, upload (4 formats), full analysis pipeline with citation verification, insights view, grounded chat, PDF export, free tier limits, Paystack Pro checkout, public demo mode (FR-37), analytics instrumentation.
 Why: this is the complete core loop and the smallest thing that is both sellable and portfolio-worthy.
 
 **Priority order within Phase 1** (for a solo founder — if the schedule slips, cut from the bottom, not at random):
 1. Core loop: auth, upload, analysis pipeline, citation verification, insights view, chat.
 2. Limits and quotas: FR-7, FR-9, FR-21, FR-22, FR-22b, FR-31, FR-42.
 3. Landing page + public demo mode (FR-37).
-4. Automated Flutterwave billing (checkout, webhook, grace period, downgrade). If this slips past week 8, launch on the free tier only and take the first Pro payments manually via Flutterwave payment links, wiring up automated billing in weeks 9–10. This still allows G-3 (first paying customer within 60 days) to hold.
+4. Automated Paystack billing (checkout, webhook, grace period, downgrade). If this slips past week 8, launch on the free tier only and take the first Pro payments manually via Paystack payment links, wiring up automated billing in weeks 9–10. This still allows G-3 (first paying customer within 60 days) to hold.
 
 **Also in Phase 1, not part of the shippable product but required before launch:**
 - Week 3: build the 20-case golden eval set (documents + expected insights + out-of-scope chat questions). This gates launch and is a dependency of M-5, R-6, and R-10 — none of which can be measured without it.
@@ -595,5 +595,5 @@ Why: moves upmarket toward Chidera-type buyers once single-player value is prove
 - OQ-2: (Resolved by FR-37 — demo is fully public, no email capture, to maximize portfolio reach. Revisit only if lead capture becomes a priority post-launch.)
 - OQ-3: Data residency: any commitment to a specific region (EU users may ask)? MVP assumes one region, unspecified.
 - OQ-4: Which sending domain and sender identity to use for transactional email (Resend, per A-11)? Affects deliverability of verification emails to Nigerian inboxes specifically.
-- OQ-5: Refund policy wording for Flutterwave subscriptions (pro-rated vs none). Needs a decision before ToS is written.
+- OQ-5: Refund policy wording for Paystack subscriptions (pro-rated vs none). Needs a decision before ToS is written.
 - OQ-6: Domain availability for "UXLens AI" (name is decided; the domain is not).

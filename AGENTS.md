@@ -31,7 +31,7 @@ These choices are already made. You do not evaluate alternatives, propose swaps,
 - Cloudflare R2 as the only file store. Never store uploaded files on local disk or in Postgres.
 
 **Services**
-- Flutterwave is the only payment provider. NGN is the only currency. Do not add Stripe, Paystack, or any USD price — that is explicitly out of scope (NG-7) until Phase 3, and only then if a documented trigger in the PRD is hit.
+- Paystack is the only payment provider. NGN is the only currency. Do not add Stripe, Flutterwave, or any USD price — that is explicitly out of scope (NG-7) until Phase 3, and only then if a documented trigger in the PRD is hit. (Changed from Flutterwave to Paystack by explicit founder decision; see `Docs/prd-uxlens-ai.md` for the FR-33/34 wording this update reflects.)
 - Auth.js (NextAuth v5) with the Prisma adapter is the only auth system. Do not hand-roll session handling.
 - Nodemailer (Gmail SMTP) is the only transactional email provider.
 - Sentry for error tracking, pino for structured logs. Do not add a second logging library.
@@ -77,7 +77,7 @@ Every rule below is a hard boundary. **Breaking any rule on this list means the 
 
 10. **Never charge, price, or display an amount in any currency other than NGN.** No USD price anywhere in the product, even as a secondary display, at MVP. *(NG-7)*
 
-11. **Never let a webhook be processed twice.** The Flutterwave webhook handler is idempotent by transaction reference — verify the signature, then check whether that `txRef` has already been processed before acting on it. *(FR-34)*
+11. **Never let a webhook be processed twice.** The Paystack webhook handler is idempotent by transaction reference — verify the signature, then check whether that `txRef` has already been processed before acting on it. *(FR-34)*
 
 12. **Never let a `PAST_DUE` subscription stay Pro forever.** The grace period (5 days) must actually end via the daily billing-enforcement job. If you build the grace period without also building the job that terminates it, you have built half a feature that behaves like a bug.
 
@@ -143,7 +143,7 @@ Every rule below is a hard boundary. **Breaking any rule on this list means the 
     passA.ts / passB.ts / passC.ts / passD.ts   # Stage 4
     retrieval.ts               # Stage 5: size check → full-context or FTS+keyword-expansion
   /billing
-    flutterwave.ts
+    paystack.ts
   /email
     nodemailer.ts
   /storage

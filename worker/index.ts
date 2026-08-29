@@ -7,6 +7,7 @@ import { startEmailWorker } from "./queues/email.ts";
 import { startCleanupWorker } from "./queues/cleanup.ts";
 import { startDocProcessingWorker } from "./queues/doc-processing.ts";
 import { startAnalysisWorker } from "./queues/analysis.ts";
+import { scheduleBillingEnforcement, scheduleChatMessagePruning } from "../lib/queue/cleanup.ts";
 
 const emailWorker = startEmailWorker();
 
@@ -46,6 +47,14 @@ analysisWorker.on("completed", (job) => {
 
 analysisWorker.on("failed", (job, err) => {
   console.error(`[worker] analysis job ${job?.id ?? "?"} failed:`, err.message);
+});
+
+scheduleBillingEnforcement().catch((err) => {
+  console.error("[worker] failed to schedule billing-enforcement:", err.message);
+});
+
+scheduleChatMessagePruning().catch((err) => {
+  console.error("[worker] failed to schedule prune-deleted-chat-messages:", err.message);
 });
 
 console.log("[worker] started, listening for jobs on queues: email, cleanup, doc-processing, analysis");

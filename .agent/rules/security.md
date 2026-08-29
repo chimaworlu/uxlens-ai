@@ -8,7 +8,7 @@ Breaking any rule in this file is a security failure, not a bug — treat it wit
 
 ## Secrets and keys
 
-- Every provider key (DeepSeek, Anthropic/Claude, Flutterwave, Resend, Cloudflare R2, database connection string, session/JWT secret) lives server-side only, loaded from environment variables. None of these are ever sent to, embedded in, or reachable from client-side code.
+- Every provider key (DeepSeek, Anthropic/Claude, Paystack, Resend, Cloudflare R2, database connection string, session/JWT secret) lives server-side only, loaded from environment variables. None of these are ever sent to, embedded in, or reachable from client-side code.
 - If you write code that would ship a secret in a Next.js client bundle (anything imported into a `'use client'` component, anything in `NEXT_PUBLIC_*` that shouldn't be public), stop immediately — this is not a lint warning, it's a live leak.
 - No AI provider call originates from the browser. Every DeepSeek or Claude call goes through the server or the worker, behind the provider interface (`/lib/ai/provider.ts`).
 
@@ -28,7 +28,7 @@ Breaking any rule in this file is a security failure, not a bug — treat it wit
 
 ## Webhooks
 
-- The Flutterwave webhook handler verifies the signature (`verif-hash` header) before doing anything else with the payload. An unverified webhook call is treated as untrusted input, full stop.
+- The Paystack webhook handler verifies the signature (`x-paystack-signature` header, a computed HMAC-SHA512 of the raw body) before doing anything else with the payload. An unverified webhook call is treated as untrusted input, full stop.
 - The handler is idempotent by transaction reference (`txRef`): check whether that reference has already been processed before acting on it. Never assume a webhook fires exactly once — replay, retries, and duplicate delivery are normal for webhooks, not edge cases.
 
 ## Rate limiting and abuse
@@ -36,6 +36,7 @@ Breaking any rule in this file is a security failure, not a bug — treat it wit
 - The public demo route (`/api/demo`, FR-37) is the one unauthenticated surface in the product. It is rate-limited to 20 requests/min/IP, capped at 5 chat messages per browser session, and has no path to uploads, analysis triggers, or unbounded AI calls. This is a security control, not a UX nicety — an unauthenticated route with an open path to paid AI calls is a direct abuse and cost-drain vector.
 - Auth endpoints are rate-limited (10/min/IP) to slow credential-stuffing and brute-force attempts.
 - Upload presign requests are rate-limited (30/hour/user) so a compromised or scripted account can't be used to exhaust storage or queue capacity.
+- Billing endpoints are rate-limited too: the Paystack webhook (120/min/IP, since it's unauthenticated by design), checkout creation (10/hour/user), the checkout-redirect verify route (30/hour/user), and self-serve cancel (10/hour/user).
 
 ## Data handling and disclosure
 
