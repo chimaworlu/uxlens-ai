@@ -4,6 +4,18 @@
   flex-direction: column;
 }
 
+/* ---------- post-account-deletion banner (FR-38) ---------- */
+.deletedBanner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ds-spacing-sm);
+  padding: var(--ds-spacing-md) var(--ds-spacing-lg);
+  background-color: var(--color-roles-success-container);
+  color: var(--color-roles-on-success-container);
+  text-align: center;
+}
+
 /* ---------- nav ---------- */
 .nav {
   display: flex;

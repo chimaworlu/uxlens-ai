@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import styles from "./page.module.css";
 
 type Section = "home" | "testimonial" | "contact";
@@ -44,9 +45,22 @@ const TESTIMONIALS = [
 ];
 
 export default function MarketingPage() {
+  const router = useRouter();
   const [activeSection, setActiveSection] = useState<Section>("home");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [showDeletedBanner, setShowDeletedBanner] = useState(false);
   const hamburgerRef = useRef<HTMLButtonElement>(null);
+
+  // FR-38: a one-time confirmation banner after account deletion. Read
+  // once on mount, then the query param is stripped immediately so a
+  // refresh (or sharing the URL) doesn't show it again.
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("accountDeleted") === "1") {
+      setShowDeletedBanner(true);
+      router.replace("/", { scroll: false });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     document.title = TITLE_COPY[activeSection];
@@ -66,6 +80,13 @@ export default function MarketingPage() {
 
   return (
     <div className={styles.page}>
+      {showDeletedBanner && (
+        <div className={`${styles.deletedBanner} ds-body-medium`} role="status">
+          <CheckIcon />
+          Your account has been deleted. Your data will be fully removed within 24 hours.
+        </div>
+      )}
+
       <nav
         className={styles.nav}
         onKeyDown={(event) => {
@@ -271,6 +292,21 @@ function PlayIcon() {
   return (
     <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
       <path d="M2 1.5v9l8-4.5-8-4.5z" fill="currentColor" />
+    </svg>
+  );
+}
+
+function CheckIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+      <circle cx="10" cy="10" r="9" fill="currentColor" fillOpacity="0.15" />
+      <path
+        d="M6 10.2l2.4 2.4L14.2 7"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
