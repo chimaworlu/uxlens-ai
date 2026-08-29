@@ -3,6 +3,17 @@
   display: flex;
   flex-direction: column;
   background-color: var(--color-roles-surface);
+  /* overflow-x: hidden used to live here as a guard against page-level
+     horizontal drag, but per spec, setting overflow-x to anything but
+     visible while overflow-y stays at its default visible silently
+     promotes overflow-y to auto too — turning .page into its own nested
+     scroll container instead of the real document scrolling. That broke
+     position: sticky/fixed for everything inside it (the desktop Insights
+     sidebar, the Chat input dock), since they'd stick relative to the
+     wrong box. The same horizontal guard now lives on body (globals.css),
+     which doesn't have this side effect — it's already the root scrolling
+     element, so constraining its overflow-x doesn't create a competing
+     inner scrollport the way it does partway down the tree. */
 }
 
 .nav {
@@ -92,7 +103,10 @@
 }
 
 .tabDisabled {
-  opacity: 0.5;
+  color: var(--color-roles-primary);
+  opacity: 0.4;
+  pointer-events: none;
+  cursor: not-allowed;
 }
 
 /* ---------- header row ---------- */
@@ -403,6 +417,22 @@
 @media (max-width: 720px) {
   .nav {
     padding: var(--ds-spacing-base) var(--ds-spacing-lg);
+    /* navLeft (brand + breadcrumb + version) and navActions (Export,
+       Re-run — Insights/Chat only) never fit on one line at phone widths,
+       and .nav has no wrap by default, so the row was forcing the whole
+       page into horizontal scroll. Wrapping drops navActions to its own
+       line below; with only one item per line, justify-content:
+       space-between naturally left-aligns it there, matching the design. */
+    flex-wrap: wrap;
+    row-gap: var(--ds-spacing-xl);
+    column-gap: var(--ds-spacing-md);
+  }
+
+  /* "Projects / <name>" is redundant with the page you're already on and
+     is the biggest single contributor to the top row overflowing — the
+     mobile design drops it and keeps just the brand and version picker. */
+  .breadcrumb {
+    display: none;
   }
 
   .main {
