@@ -11,6 +11,9 @@ dist/
 npm-debug.log*
 *.tsbuildinfo
 next-env.d.ts
+dev-server.log
+worker-stdout.log
+worker-stderr.log
 
 .DS_Store
 Thumbs.db
