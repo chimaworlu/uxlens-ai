@@ -98,11 +98,6 @@
   text-align: center;
 }
 
-.stepPurpose {
-  color: var(--color-roles-primary);
-  margin-top: calc(-1 * var(--ds-spacing-xs));
-}
-
 .dots {
   display: flex;
   align-items: center;

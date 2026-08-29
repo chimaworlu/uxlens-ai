@@ -6,12 +6,6 @@ import styles from "./onboarding.module.css";
 
 const TOTAL_STEPS = 3;
 
-const STEP_LABELS = {
-  1: "What UXLens does",
-  2: "Privacy note",
-  3: "Get started",
-} as const;
-
 const PLAN_LIMITS: { label: string; value: string }[] = [
   { label: "Active projects", value: "1" },
   { label: "Documents per project", value: "1" },
@@ -90,9 +84,6 @@ export default function OnboardingPage() {
           </div>
           <span className={`${styles.stepLabel} ds-label-medium`}>
             Step {step} of {TOTAL_STEPS}
-          </span>
-          <span className={`${styles.stepPurpose} ds-label-medium`}>
-            {STEP_LABELS[step as keyof typeof STEP_LABELS]}
           </span>
 
           {step === 1 && (
