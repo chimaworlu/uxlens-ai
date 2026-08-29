@@ -270,7 +270,9 @@ export default function ProjectUploadPage() {
                 <Link href={`/projects/${projectId}/insights`} className={`${styles.tab} ds-label-large`}>
                   Insights
                 </Link>
-                <span className={`${styles.tab} ${styles.tabDisabled} ds-label-large`}>Chat</span>
+                <Link href={`/projects/${projectId}/chat`} className={`${styles.tab} ds-label-large`}>
+                  Chat
+                </Link>
               </div>
 
               <div className={styles.titleRow}>
@@ -556,16 +558,16 @@ function CloudUploadIcon() {
   return (
     <svg width="32" height="32" viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <path
-        d="M7 18a4 4 0 0 1-.6-7.96A5 5 0 0 1 16.3 8.05 4.5 4.5 0 0 1 16.5 17H7z"
+        d="M4.393 15.269A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"
         stroke="currentColor"
-        strokeWidth="1.5"
+        strokeWidth="1.75"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
       <path
-        d="M12 11v6m0-6-2.2 2.2M12 11l2.2 2.2"
+        d="M12 13v8m-4-4 4-4 4 4"
         stroke="currentColor"
-        strokeWidth="1.5"
+        strokeWidth="1.75"
         strokeLinecap="round"
         strokeLinejoin="round"
       />

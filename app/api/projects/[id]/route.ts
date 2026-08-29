@@ -13,14 +13,15 @@ export async function GET(
 
   const project = await prisma.project.findFirst({
     where: { id, userId },
-    select: { id: true, name: true, createdAt: true },
+    select: { id: true, name: true, createdAt: true, _count: { select: { documents: true } } },
   });
 
   if (!project) {
     return NextResponse.json({ error: "Project not found." }, { status: 404 });
   }
 
-  return NextResponse.json(project);
+  const { _count, ...rest } = project;
+  return NextResponse.json({ ...rest, documentCount: _count.documents });
 }
 
 export async function DELETE(

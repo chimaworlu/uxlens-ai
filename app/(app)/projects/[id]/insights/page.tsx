@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import layout from "../upload.module.css";
 import styles from "./insights.module.css";
+import { CitationPanel, type CitationDetail } from "../CitationPanel";
 
 type AnalysisStatus = "QUEUED" | "PROCESSING" | "READY" | "FAILED" | "STALE";
 type Refusal = "too-little" | "too-much" | "quota" | "in-progress";
@@ -58,18 +59,6 @@ type VersionEntry = {
   documentCount: number;
 };
 
-type CitationDetail = {
-  id: string;
-  quote: string;
-  charStart: number;
-  charEnd: number;
-  chunkContent: string;
-  pageNumber: number | null;
-  documentId: string;
-  documentFilename: string;
-  insightTitle: string;
-  otherDocuments: { citationId: string; filename: string }[];
-};
 
 type ViewState =
   | { kind: "loading" }
@@ -105,6 +94,8 @@ function ProjectInsightsContent() {
 
   const [projectName, setProjectName] = useState("");
   const [plan, setPlan] = useState<"FREE" | "PRO">("FREE");
+  const [emailVerified, setEmailVerified] = useState(true);
+  const [hasDocuments, setHasDocuments] = useState(true);
   const [pageStatus, setPageStatus] = useState<"loading" | "ready" | "error">("loading");
   const [view, setView] = useState<ViewState>({ kind: "loading" });
   const [versions, setVersions] = useState<VersionEntry[]>([]);
@@ -259,16 +250,18 @@ function ProjectInsightsContent() {
     Promise.all([
       fetch("/api/users/status").then((response) => {
         if (!response.ok) throw new Error("Could not load account.");
-        return response.json() as Promise<{ plan: "FREE" | "PRO" }>;
+        return response.json() as Promise<{ plan: "FREE" | "PRO"; verified: boolean }>;
       }),
       fetch(`/api/projects/${projectId}`).then((response) => {
         if (!response.ok) throw new Error("Could not load project.");
-        return response.json() as Promise<{ name: string }>;
+        return response.json() as Promise<{ name: string; documentCount: number }>;
       }),
     ])
       .then(([userData, projectData]) => {
         setPlan(userData.plan);
+        setEmailVerified(userData.verified);
         setProjectName(projectData.name);
+        setHasDocuments(projectData.documentCount > 0);
         setPageStatus("ready");
       })
       .catch(() => setPageStatus("error"));
@@ -397,7 +390,9 @@ function ProjectInsightsContent() {
                   Documents
                 </Link>
                 <span className={`${layout.tab} ${layout.tabActive} ds-label-large`}>Insights</span>
-                <span className={`${layout.tab} ${layout.tabDisabled} ds-label-large`}>Chat</span>
+                <Link href={`/projects/${projectId}/chat`} className={`${layout.tab} ds-label-large`}>
+                  Chat
+                </Link>
               </div>
 
               <InsightsBody
@@ -408,6 +403,8 @@ function ProjectInsightsContent() {
                 onCopyInsight={handleCopyInsight}
                 onOpenCitation={handleOpenCitation}
                 activeCitationId={activeCitationId}
+                hasDocuments={hasDocuments}
+                emailVerified={emailVerified}
               />
             </>
           )}
@@ -438,6 +435,8 @@ function InsightsBody({
   onCopyInsight,
   onOpenCitation,
   activeCitationId,
+  hasDocuments,
+  emailVerified,
 }: {
   view: ViewState;
   projectId: string;
@@ -446,6 +445,8 @@ function InsightsBody({
   onCopyInsight: (insight: Insight) => void;
   onOpenCitation: (citationId: string) => void;
   activeCitationId: string | null;
+  hasDocuments: boolean;
+  emailVerified: boolean;
 }) {
   const backToDocuments = `/projects/${projectId}`;
 
@@ -458,16 +459,31 @@ function InsightsBody({
   }
 
   if (view.kind === "empty") {
+    // No documents blocks before email verification does — without a
+    // document to analyze, verifying doesn't unblock anything yet.
+    const blockedOn = !hasDocuments ? "documents" : !emailVerified ? "verification" : null;
+    const heading =
+      blockedOn === "documents"
+        ? "Add a document to get started"
+        : blockedOn === "verification"
+          ? "Verify your email to continue"
+          : "Ready to analyze";
+    const message =
+      blockedOn === "documents"
+        ? "Upload at least one document before you can run an analysis."
+        : blockedOn === "verification"
+          ? "Verify your email address before you can run an analysis."
+          : "Run an analysis to turn your uploaded documents into themes, pain points, and suggestions.";
+
     return (
       <div className={styles.emptyState}>
         <DocumentIcon />
-        <h2 className="ds-headline-small">Ready to analyze</h2>
-        <p className="ds-body-large">
-          Run an analysis to turn your uploaded documents into themes, pain points, and suggestions.
-        </p>
+        <h2 className="ds-headline-small">{heading}</h2>
+        <p className="ds-body-large">{message}</p>
         <button
           type="button"
           onClick={onRunAnalysis}
+          disabled={blockedOn !== null}
           className={`${layout.buttonPrimary} ds-label-large`}
         >
           Run analysis
@@ -817,6 +833,25 @@ function InsightCard({
   onOpenCitation: (citationId: string) => void;
   activeCitationId: string | null;
 }) {
+  // Local, not lifted to the parent: each card's own "copied" flash is
+  // independent of every other card's, so there's no reason for this to
+  // live above the component that shows it.
+  const [copied, setCopied] = useState(false);
+  const copiedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (copiedTimeoutRef.current) clearTimeout(copiedTimeoutRef.current);
+    };
+  }, []);
+
+  function handleCopyClick() {
+    onCopy(insight);
+    setCopied(true);
+    if (copiedTimeoutRef.current) clearTimeout(copiedTimeoutRef.current);
+    copiedTimeoutRef.current = setTimeout(() => setCopied(false), 1500);
+  }
+
   return (
     <div className={`${styles.insightCard} ${insight.starred ? styles.insightCardStarred : ""}`}>
       <div className={styles.insightCardHeader}>
@@ -832,12 +867,12 @@ function InsightCard({
         <div className={styles.insightActions}>
           <button
             type="button"
-            onClick={() => onCopy(insight)}
-            className={styles.iconGhostButton}
-            aria-label="Copy insight with citations"
-            title="Copy insight with citations"
+            onClick={handleCopyClick}
+            className={`${styles.iconGhostButton} ${copied ? styles.iconGhostButtonSuccess : ""}`}
+            aria-label={copied ? "Copied" : "Copy insight with citations"}
+            title={copied ? "Copied" : "Copy insight with citations"}
           >
-            <CopyIcon />
+            {copied ? <CheckmarkIcon /> : <CopyIcon />}
           </button>
           <button
             type="button"
@@ -874,99 +909,6 @@ function InsightCard({
   );
 }
 
-function CitationPanel({
-  loading,
-  citation,
-  onClose,
-  onOpenOther,
-  onOpenFullDocument,
-}: {
-  loading: boolean;
-  citation: CitationDetail | null;
-  onClose: () => void;
-  onOpenOther: (citationId: string) => void;
-  onOpenFullDocument: (documentId: string) => void;
-}) {
-  return (
-    <div className={styles.citationPanel} role="dialog" aria-label="Citation detail">
-      {loading || !citation ? (
-        <p className={`${styles.citationPanelLoading} ds-body-large`}>Loading…</p>
-      ) : (
-        <>
-          <div className={styles.citationPanelHeader}>
-            <div className={styles.citationPanelTitle}>
-              <SmallFileIcon />
-              <div>
-                <p className={`${styles.citationPanelFilename} ds-title-medium`}>
-                  {citation.documentFilename}
-                </p>
-                {citation.pageNumber !== null && (
-                  <p className={`${styles.citationPanelPage} ds-label-medium`}>
-                    Page {citation.pageNumber}
-                  </p>
-                )}
-              </div>
-            </div>
-            <button type="button" onClick={onClose} className={styles.iconGhostButton} aria-label="Close">
-              <CloseIcon />
-            </button>
-          </div>
-
-          <span className={`${styles.citationSourceChip} ds-label-medium`}>
-            Source for: {citation.insightTitle}
-          </span>
-
-          <p className={`${styles.citationBody} ds-body-large`}>
-            {stripPageMarker(citation.chunkContent.slice(0, citation.charStart))}
-            <mark className={styles.citationHighlight}>
-              {stripPageMarker(citation.chunkContent.slice(citation.charStart, citation.charEnd))}
-            </mark>
-            {stripPageMarker(citation.chunkContent.slice(citation.charEnd))}
-          </p>
-
-          {citation.otherDocuments.length > 0 && (
-            <>
-              <hr className={styles.citationDivider} />
-              <div>
-                <p className={`${styles.citationOtherLabel} ds-label-medium`}>Other sources for this finding</p>
-                <div className={styles.citationChips}>
-                  {citation.otherDocuments.map((doc) => (
-                    <button
-                      key={doc.citationId}
-                      type="button"
-                      onClick={() => onOpenOther(doc.citationId)}
-                      className={`${styles.citationChip} ds-label-small`}
-                      title={`View citation in ${doc.filename}`}
-                    >
-                      <SmallFileIcon />
-                      {doc.filename}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </>
-          )}
-
-          <div className={styles.citationFooter}>
-            <hr className={styles.citationDivider} />
-            <button
-              type="button"
-              onClick={() => onOpenFullDocument(citation.documentId)}
-              className={`${styles.buttonOutlined} ds-label-large`}
-            >
-              Open full document
-            </button>
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
-
-function stripPageMarker(text: string): string {
-  return text.replace(/\[Page \d+\]\n/g, "");
-}
-
 function DocumentIcon() {
   return (
     <svg width="32" height="32" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -984,13 +926,29 @@ function DocumentWarningIcon() {
   return (
     <svg width="40" height="40" viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <path
-        d="M7 3h7l4 4v14a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z"
+        d="M6 3h8l4 4v14a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z"
         stroke="currentColor"
-        strokeWidth="1.5"
+        strokeWidth="1.75"
+        strokeLinejoin="round"
       />
-      <path d="M9 8h6M9 12h3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-      <circle cx="17" cy="17" r="5" fill="currentColor" opacity="0.15" />
-      <path d="M17 15v2.2M17 19v.1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      <path
+        d="M8 9h5M8 12.5h5M8 16h3"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+      />
+      {/* Solid page-color fill, not a translucent wash — masks the document
+          outline behind it so the badge reads as its own outlined circle,
+          matching the design. */}
+      <circle
+        cx="18"
+        cy="18"
+        r="4.5"
+        fill="var(--color-roles-surface)"
+        stroke="currentColor"
+        strokeWidth="1.75"
+      />
+      <path d="M18 16v1.8M18 20v.1" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" />
     </svg>
   );
 }
@@ -1108,19 +1066,6 @@ function SmallFileIcon() {
         d="M7 3h7l4 4v14a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z"
         stroke="currentColor"
         strokeWidth="1.6"
-      />
-    </svg>
-  );
-}
-
-function CloseIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path
-        d="M6 6l12 12M18 6 6 18"
-        stroke="currentColor"
-        strokeWidth="1.7"
-        strokeLinecap="round"
       />
     </svg>
   );

@@ -45,14 +45,24 @@ export async function GET(
   const userId = await getSessionUserId();
   if (!userId) return NextResponse.json({ error: "Not signed in." }, { status: 401 });
 
+  // A citation belongs to exactly one of an Insight or a ChatMessage
+  // (Citation.insightId / .chatMessageId are both optional FKs) — ownership
+  // has to be checked through whichever one is actually set.
   const citation = await prisma.citation.findFirst({
-    where: { id: citationId, insight: { analysis: { project: { userId } } } },
+    where: {
+      id: citationId,
+      OR: [
+        { insight: { analysis: { project: { userId } } } },
+        { chatMessage: { project: { userId } } },
+      ],
+    },
     select: {
       id: true,
       quote: true,
       charStart: true,
       charEnd: true,
       insightId: true,
+      chatMessageId: true,
       chunk: {
         select: {
           content: true,
@@ -66,7 +76,9 @@ export async function GET(
   if (!citation) return NextResponse.json({ error: "Citation not found." }, { status: 404 });
 
   const otherCitations = await prisma.citation.findMany({
-    where: { insightId: citation.insightId, id: { not: citation.id } },
+    where: citation.insightId
+      ? { insightId: citation.insightId, id: { not: citation.id } }
+      : { chatMessageId: citation.chatMessageId, id: { not: citation.id } },
     select: {
       id: true,
       chunk: { select: { document: { select: { filename: true } } } },

@@ -1,4 +1,5 @@
 import { prisma } from "../../db/prisma.ts";
+import { pruneAnalysisVersions } from "../../quota/checks.ts";
 import { runPassA } from "./passA.ts";
 import { runPassB } from "./passB.ts";
 import { runPassC } from "./passC.ts";
@@ -82,4 +83,6 @@ export async function runAnalysis(analysisId: string): Promise<void> {
       },
     });
   });
+
+  await pruneAnalysisVersions(analysis.projectId);
 }
