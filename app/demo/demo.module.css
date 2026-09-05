@@ -1,0 +1,47 @@
+/* Only what's unique to the public demo shell — everything else (page,
+   nav, tabs, insight cards, chat dock) reuses the authenticated pages'
+   own CSS Modules directly, see page.tsx's import comment. */
+
+.signupCta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--color-roles-primary);
+  color: var(--color-roles-on-primary);
+  border-radius: var(--ds-radius-medium);
+  padding: var(--ds-spacing-sm) var(--ds-spacing-lg);
+  text-decoration: none;
+}
+
+.demoHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--ds-spacing-lg);
+}
+
+.demoBadge {
+  display: inline-flex;
+  align-items: center;
+  background-color: var(--color-roles-tertiary-container);
+  color: var(--color-roles-on-tertiary-container);
+  border-radius: var(--ds-radius-full);
+  padding: 2px var(--ds-spacing-sm);
+  margin-bottom: var(--ds-spacing-xs);
+}
+
+.chatHint {
+  color: var(--color-roles-on-surface-variant);
+}
+
+/* upload.module.css's .tab is styled for a <Link> — no native chrome to
+   begin with. The demo's Insights/Chat toggle is a <button> (nothing to
+   navigate to, just local view state), so it still carries the browser's
+   default button box (background, border, padding) on top of .tab's own
+   styling unless reset here. */
+.tabButton {
+  background: none;
+  border: none;
+  font: inherit;
+  cursor: pointer;
+}
