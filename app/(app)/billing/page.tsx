@@ -145,7 +145,7 @@ export default function BillingPage() {
                 <div className={styles.upgradeBanner}>
                   <h2 className="ds-title-medium">Upgrade to Pro</h2>
                   <p className="ds-body-medium">
-                    Get up to 30 analysis runs, 500 chat messages a day, 15 projects, and 500 MB of
+                    Get up to 15 analysis runs, 500 chat messages a day, 15 projects, and 500 MB of
                     storage per project.
                   </p>
                   <button
@@ -215,17 +215,25 @@ export default function BillingPage() {
 
 function PlanCard({ data }: { data: PortalData }) {
   if (data.plan === "PRO" && data.subscription) {
+    // Once cancelAtPeriodEnd is set, currentPeriodEnd is an access-end
+    // date, not a future charge — Paystack won't bill again, so "Next
+    // billing date" would be actively wrong here, not just stale copy.
+    const cancelling = data.subscription.cancelAtPeriodEnd;
     return (
       <div className={styles.card}>
         <div className={styles.planRow}>
           <div className={styles.planTitleRow}>
             <span className="ds-title-medium">Pro plan</span>
-            <span className={`${styles.badge} ${styles.badgeActive} ds-label-small`}>Active</span>
+            <span
+              className={`${styles.badge} ${cancelling ? styles.badgeCancelling : styles.badgeActive} ds-label-small`}
+            >
+              {cancelling ? "Cancelling" : "Active"}
+            </span>
           </div>
           <span className="ds-title-medium">{PRO_PRICE_LABEL}</span>
         </div>
         <p className={`${styles.cardSubtext} ds-body-medium`}>
-          Next billing date: {formatDate(data.subscription.currentPeriodEnd)}
+          {cancelling ? "Access ends" : "Next billing date"}: {formatDate(data.subscription.currentPeriodEnd)}
         </p>
       </div>
     );

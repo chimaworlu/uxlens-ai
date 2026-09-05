@@ -454,6 +454,20 @@
   padding: var(--ds-spacing-xl);
   text-align: center;
   color: var(--color-roles-on-surface-variant);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--ds-spacing-sm);
+}
+
+.footerLinks {
+  display: flex;
+  gap: var(--ds-spacing-md);
+}
+
+.footerLinks a {
+  color: inherit;
+  text-decoration: underline;
 }
 
 @media (max-width: 720px) {

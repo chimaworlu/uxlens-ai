@@ -135,6 +135,11 @@
   color: var(--color-roles-on-primary-container);
 }
 
+.badgeCancelling {
+  background-color: var(--color-roles-tertiary-container);
+  color: var(--color-roles-on-tertiary-container);
+}
+
 /* ---------- usage meters ---------- */
 .meter {
   display: flex;

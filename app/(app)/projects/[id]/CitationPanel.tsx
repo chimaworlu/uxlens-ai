@@ -92,7 +92,7 @@ export function CitationPanel({
                       title={`View citation in ${doc.filename}`}
                     >
                       <SmallFileIcon />
-                      {doc.filename}
+                      <span className={styles.citationChipLabel}>{doc.filename}</span>
                     </button>
                   ))}
                 </div>

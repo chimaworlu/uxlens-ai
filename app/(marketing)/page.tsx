@@ -160,7 +160,11 @@ export default function MarketingPage() {
       </main>
 
       <footer className={`${styles.footer} ds-body-small`}>
-        {FOOTER_COPY[activeSection]}
+        <span>{FOOTER_COPY[activeSection]}</span>
+        <span className={styles.footerLinks}>
+          <Link href="/terms">Terms</Link>
+          <Link href="/privacy">Privacy</Link>
+        </span>
       </footer>
     </div>
   );
@@ -183,13 +187,13 @@ function HeroSection() {
         >
           Sign up free
         </Link>
-        <button
-          type="button"
+        <Link
+          href="/demo"
           className={`${styles.buttonOutlined} ds-label-large ds-focus-ring`}
         >
           <PlayIcon />
           Try the live demo
-        </button>
+        </Link>
       </div>
       <span className={`${styles.heroNote} ds-body-small`}>
         No account needed for the demo.
