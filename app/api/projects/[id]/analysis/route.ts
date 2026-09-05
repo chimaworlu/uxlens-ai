@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db/prisma";
-import { checkAnalysisQuota, QuotaExceededError } from "@/lib/quota/checks";
+import {
+  checkAnalysisQuota,
+  checkProjectWritable,
+  checkAiSpendCeiling,
+  QuotaExceededError,
+} from "@/lib/quota/checks";
 import { enqueueAnalysis } from "@/lib/queue/analysis";
 import { countWords, estimateTokens } from "@/lib/ai/tokens";
 import { getSessionUserId } from "@/lib/auth/session";
@@ -40,6 +45,18 @@ export async function POST(
     select: { id: true },
   });
   if (!project) return NextResponse.json({ error: "Project not found." }, { status: 404 });
+
+  // FR-36: a project over the plan's active-project cap is read-only —
+  // checked before every other pre-enqueue check below, since none of
+  // that matters if analysis isn't allowed here at all.
+  try {
+    await checkProjectWritable(userId, projectId);
+  } catch (error) {
+    if (error instanceof QuotaExceededError) {
+      return NextResponse.json({ error: error.message, reason: "read-only" }, { status: 403 });
+    }
+    throw error;
+  }
 
   // PRD Section 7: "1 job per project at a time" — a project already
   // mid-analysis can't have a second one enqueued on top of it.
@@ -92,6 +109,19 @@ export async function POST(
   } catch (error) {
     if (error instanceof QuotaExceededError) {
       return NextResponse.json({ error: error.message, reason: "quota" }, { status: 429 });
+    }
+    throw error;
+  }
+
+  // R-3: the daily AI spend ceiling, checked last among the quota-style
+  // gates and still before a run is consumed — an unusual case (e.g.
+  // outsized documents) can cost more than typical even while comfortably
+  // within the monthly run count above.
+  try {
+    await checkAiSpendCeiling(userId);
+  } catch (error) {
+    if (error instanceof QuotaExceededError) {
+      return NextResponse.json({ error: error.message, reason: "ai-spend" }, { status: 429 });
     }
     throw error;
   }

@@ -2,12 +2,19 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db/prisma";
 import { getSessionUserId } from "@/lib/auth/session";
-import { checkChatQuota, QuotaExceededError } from "@/lib/quota/checks";
+import {
+  checkChatQuota,
+  checkProjectWritable,
+  checkAiSpendCeiling,
+  logAiCost,
+  QuotaExceededError,
+} from "@/lib/quota/checks";
 import { checkRateLimit } from "@/lib/security/rate-limit";
 import { buildChatContext } from "@/lib/pipeline/chat/retrieve";
 import { streamAnswer } from "@/lib/pipeline/chat/respond";
 import { extractCitations } from "@/lib/pipeline/chat/citations";
 import { stripEmDash } from "@/lib/pipeline/analysis/text";
+import { logger } from "@/lib/logger";
 
 const HISTORY_TURNS = 10;
 
@@ -44,6 +51,19 @@ export async function POST(
   });
   if (!project) return NextResponse.json({ error: "Project not found." }, { status: 404 });
 
+  // FR-36 (per product decision: chat is disabled on read-only projects,
+  // not exempted like the PRD's original text) — checked before every
+  // other gate below, since none of it matters if chat isn't allowed here
+  // at all.
+  try {
+    await checkProjectWritable(userId, projectId);
+  } catch (error) {
+    if (error instanceof QuotaExceededError) {
+      return NextResponse.json({ error: error.message, reason: "read-only" }, { status: 403 });
+    }
+    throw error;
+  }
+
   const user = await prisma.user.findUniqueOrThrow({
     where: { id: userId },
     select: { emailVerified: true },
@@ -76,6 +96,18 @@ export async function POST(
     throw error;
   }
 
+  // R-3: the daily AI spend ceiling, checked alongside the message quota
+  // above and before any AI call this turn makes (keyword expansion,
+  // then the answer itself).
+  try {
+    await checkAiSpendCeiling(userId);
+  } catch (error) {
+    if (error instanceof QuotaExceededError) {
+      return NextResponse.json({ error: error.message, reason: "ai-spend" }, { status: 429 });
+    }
+    throw error;
+  }
+
   // .agent/rules/security.md: burst cap on top of the daily quota — 10/min
   // per user, same checkRateLimit helper documents/presign/route.ts uses.
   const withinRateLimit = await checkRateLimit(`chat:${userId}`, 10, 60);
@@ -97,6 +129,15 @@ export async function POST(
   // run in parallel with that create, so there's no race where this query
   // could pick up the just-written row and double it into the prompt
   // alongside the explicit "Question: ..." block in respond.ts.
+  // R-3: one running total across every AI call this turn makes (keyword
+  // expansion inside buildChatContext, then the streamed answer itself),
+  // logged as a single UsageRecord alongside the chat_message row below
+  // rather than one row per call.
+  let totalCostUsd = 0;
+  const onCost = (usd: number) => {
+    totalCostUsd += usd;
+  };
+
   const [priorTurns, latestAnalysis, context] = await Promise.all([
     prisma.chatMessage.findMany({
       where: { projectId, deletedAt: null },
@@ -109,7 +150,7 @@ export async function POST(
       orderBy: { version: "desc" },
       select: { executiveSummary: true },
     }),
-    buildChatContext(projectId, question),
+    buildChatContext(projectId, question, onCost),
   ]);
 
   // FR-30: search found nothing to ground an answer in — refuse rather
@@ -145,8 +186,18 @@ export async function POST(
 
   const stream = new ReadableStream({
     async start(controller) {
+      // Swallows enqueue-on-closed-controller errors: if the user closes
+      // the tab or navigates away mid-answer, the runtime closes this
+      // controller on its own, but the async work above (DB write,
+      // citation extraction) keeps running and eventually calls send()
+      // again — nothing left to deliver it to at that point, and the
+      // message/citations already persisted above aren't lost either way.
       function send(payload: Record<string, unknown>) {
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify(payload)}\n\n`));
+        try {
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify(payload)}\n\n`));
+        } catch {
+          // Client disconnected — nothing to do.
+        }
       }
 
       try {
@@ -155,6 +206,7 @@ export async function POST(
           context,
           history,
           executiveSummary: latestAnalysis?.executiveSummary ?? null,
+          onCost,
         })) {
           fullText += delta;
           send({ type: "delta", text: delta });
@@ -185,6 +237,7 @@ export async function POST(
         });
 
         await prisma.usageRecord.create({ data: { userId, kind: "chat_message" } });
+        await logAiCost(userId, totalCostUsd);
 
         // One chip per distinct source document, not per citation — an
         // answer can cite the same chunk several times across an answer
@@ -207,12 +260,14 @@ export async function POST(
           citations: citationChips,
         });
       } catch (error) {
-        console.error(
-          JSON.stringify({ event: "chat_stream_error", error: (error as Error).message })
-        );
+        logger.error({ event: "chat_stream_error", projectId, err: (error as Error).message }, "Chat stream failed.");
         send({ type: "error", message: "Something went wrong. Please try again." });
       } finally {
-        controller.close();
+        try {
+          controller.close();
+        } catch {
+          // Already closed by the runtime (client disconnected) — fine.
+        }
       }
     },
   });

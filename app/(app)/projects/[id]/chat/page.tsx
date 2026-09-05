@@ -117,6 +117,7 @@ export default function ChatPage() {
   const [projectName, setProjectName] = useState("");
   const [emailVerified, setEmailVerified] = useState(true);
   const [hasDocuments, setHasDocuments] = useState(true);
+  const [readOnly, setReadOnly] = useState(false);
   const [chatUsedToday, setChatUsedToday] = useState(0);
   const [chatLimit, setChatLimit] = useState(30);
   const [analysisId, setAnalysisId] = useState<string | null>(null);
@@ -132,6 +133,7 @@ export default function ChatPage() {
 
   const [showClearModal, setShowClearModal] = useState(false);
   const [clearing, setClearing] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   const [showOverflowMenu, setShowOverflowMenu] = useState(false);
   const overflowMenuRef = useRef<HTMLDivElement | null>(null);
@@ -155,7 +157,7 @@ export default function ChatPage() {
       }),
       fetch(`/api/projects/${projectId}`).then((response) => {
         if (!response.ok) throw new Error("Could not load project.");
-        return response.json() as Promise<{ name: string; documentCount: number }>;
+        return response.json() as Promise<{ name: string; documentCount: number; readOnly: boolean }>;
       }),
       fetch(`/api/projects/${projectId}/chat/history`).then((response) => {
         if (!response.ok) throw new Error("Could not load chat history.");
@@ -172,6 +174,7 @@ export default function ChatPage() {
         setChatLimit(userData.chatMessageLimit);
         setProjectName(projectData.name);
         setHasDocuments(projectData.documentCount > 0);
+        setReadOnly(projectData.readOnly);
         setMessages(historyData.messages);
         if (statusData.status === "READY" || statusData.status === "STALE") {
           setAnalysisId(statusData.analysisId);
@@ -220,6 +223,7 @@ export default function ChatPage() {
   }, []);
 
   async function handleRerun() {
+    if (readOnly) return;
     await fetch(`/api/projects/${projectId}/analysis`, { method: "POST" });
     router.push(`/projects/${projectId}/insights`);
   }
@@ -241,7 +245,17 @@ export default function ChatPage() {
   }
 
   const capReached = chatUsedToday >= chatLimit;
-  const blockedOn = !hasDocuments ? "documents" : !emailVerified ? "verification" : null;
+  // FR-36 (per product decision: chat is fully disabled on read-only
+  // projects, not just upload/analysis) — checked first, since it's a
+  // project-level restriction that overrides the per-user document/
+  // verification gates below.
+  const blockedOn = readOnly
+    ? "read-only"
+    : !hasDocuments
+      ? "documents"
+      : !emailVerified
+        ? "verification"
+        : null;
 
   async function handleSend(event: FormEvent) {
     event.preventDefault();
@@ -363,7 +377,7 @@ export default function ChatPage() {
               <button
                 type="button"
                 onClick={() => setShowClearModal(true)}
-                className={`${layout.buttonOutlined} ${insightsStyles.exportButton} ${styles.desktopOnlyAction} ds-label-large`}
+                className={`${layout.buttonOutlined} ${styles.actionButtonIcon} ${styles.desktopOnlyAction} ds-label-large`}
               >
                 <TrashIcon />
                 Clear history
@@ -372,7 +386,7 @@ export default function ChatPage() {
             {analysisId && (
               <a
                 href={`/api/analyses/${analysisId}/export`}
-                className={`${layout.buttonOutlined} ${insightsStyles.exportButton} ${styles.desktopOnlyAction} ds-label-large`}
+                className={`${layout.buttonOutlined} ${styles.actionButtonIcon} ${styles.desktopOnlyAction} ds-label-large`}
               >
                 <DownloadIcon />
                 Export
@@ -383,7 +397,8 @@ export default function ChatPage() {
               <button
                 type="button"
                 onClick={handleRerun}
-                className={`${layout.buttonPrimary} ${insightsStyles.rerunButton} ds-label-large`}
+                disabled={readOnly}
+                className={`${layout.buttonPrimary} ${styles.actionButtonIcon} ds-label-large`}
               >
                 <RerunIcon />
                 Re-run analysis
@@ -468,7 +483,33 @@ export default function ChatPage() {
             </div>
           )}
 
-          {pageStatus === "ready" && blockedOn && (
+          {pageStatus === "ready" && blockedOn === "read-only" && (
+            <div className={insightsStyles.emptyState}>
+              <div className={insightsStyles.lockIcon}>
+                <LockIcon />
+              </div>
+              <h2 className="ds-headline-small">This project is read-only</h2>
+              <p className="ds-body-large">
+                This project is over your plan&apos;s active project limit, so chat is disabled here.
+                Nothing has been deleted — archive or delete another active project to free up a
+                slot, or upgrade to Pro for up to 15 active projects.
+              </p>
+              <div className={insightsStyles.actions}>
+                <button
+                  type="button"
+                  onClick={() => setShowUpgradeModal(true)}
+                  className={`${layout.buttonPrimary} ds-label-large`}
+                >
+                  Upgrade to Pro
+                </button>
+                <Link href={`/projects/${projectId}`} className={`${layout.buttonOutlined} ds-label-large`}>
+                  Back to documents
+                </Link>
+              </div>
+            </div>
+          )}
+
+          {pageStatus === "ready" && (blockedOn === "documents" || blockedOn === "verification") && (
             <div className={insightsStyles.emptyState}>
               <DocumentIcon />
               <h2 className="ds-headline-small">
@@ -506,9 +547,13 @@ export default function ChatPage() {
                       You&apos;ve reached your daily message limit. Upgrade to Pro for up to 500 messages a
                       day.
                     </span>
-                    <Link href="/billing" className={`${styles.capBannerLink} ds-label-medium`}>
+                    <button
+                      type="button"
+                      onClick={() => setShowUpgradeModal(true)}
+                      className={`${styles.capBannerLink} ds-label-medium`}
+                    >
                       Upgrade
-                    </Link>
+                    </button>
                   </div>
                 )}
                 {chatError && !capReached && (
@@ -597,6 +642,8 @@ export default function ChatPage() {
           </div>
         </div>
       )}
+
+      {showUpgradeModal && <UpgradeFeaturesModal onClose={() => setShowUpgradeModal(false)} />}
     </div>
   );
 }
@@ -669,7 +716,7 @@ function MessageRow({
               title={`View citation in ${citation.filename}`}
             >
               <SmallFileIcon />
-              {citation.filename}
+              <span className={insightsStyles.citationChipLabel}>{citation.filename}</span>
             </button>
           ))}
         </div>
@@ -687,6 +734,15 @@ function DocumentIcon() {
         strokeWidth="1.5"
       />
       <path d="M9 12h6M9 16h6M9 8h2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function LockIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <rect x="5" y="11" width="14" height="9" rx="1.5" stroke="currentColor" strokeWidth="1.7" />
+      <path d="M8 11V8a4 4 0 0 1 8 0v3" stroke="currentColor" strokeWidth="1.7" />
     </svg>
   );
 }
@@ -794,5 +850,139 @@ function TypingIndicator() {
       <span className={styles.typingDot} />
       <span className={styles.typingDot} />
     </div>
+  );
+}
+
+const PRO_FEATURES = [
+  "15 active projects",
+  "15 analysis runs a month",
+  "500 chat messages a day",
+  "500 MB storage per project",
+  "Keep up to 5 analysis versions",
+];
+
+// Same modal as the dashboard's and upload page's — duplicated rather than
+// shared, per this app's convention of keeping each page's pieces
+// self-contained. Uses `layout` (upload.module.css) classes since that
+// module already has the full modal/feature-list recipe this needs.
+function UpgradeFeaturesModal({ onClose }: { onClose: () => void }) {
+  const [upgrading, setUpgrading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleContinue() {
+    setUpgrading(true);
+    setError(null);
+    try {
+      const response = await fetch("/api/billing/checkout", { method: "POST" });
+      const result: { link?: string; error?: string } = await response.json();
+      if (!response.ok || !result.link) {
+        setError(result.error ?? "Couldn't start checkout. Please try again.");
+        setUpgrading(false);
+        return;
+      }
+      window.location.href = result.link;
+    } catch {
+      setError("Couldn't start checkout. Please try again.");
+      setUpgrading(false);
+    }
+  }
+
+  return (
+    <div className={layout.modalOverlay} role="presentation" onClick={onClose}>
+      <div
+        className={`${layout.modal} ${layout.modalCentered}`}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="upgrade-features-heading"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <button
+          type="button"
+          onClick={onClose}
+          className={`${layout.dialogCloseButton} ds-focus-ring`}
+          aria-label="Close"
+        >
+          <CloseIcon />
+        </button>
+
+        <span className={`${layout.dialogIcon} ${layout.dialogIconPrimary}`}>
+          <StarIcon />
+        </span>
+
+        <h2 id="upgrade-features-heading" className="ds-title-large">
+          Upgrade to Pro
+        </h2>
+        <p className={`${layout.modalBodyText} ds-body-medium`}>
+          ₦3,000/month. Cancel anytime, no email required.
+        </p>
+
+        <ul className={layout.featureList}>
+          {PRO_FEATURES.map((feature) => (
+            <li key={feature} className={layout.featureItem}>
+              <CheckIcon />
+              <span className="ds-body-medium">{feature}</span>
+            </li>
+          ))}
+        </ul>
+
+        {error && (
+          <span className={`${layout.errorText} ds-label-medium`} role="alert">
+            {error}
+          </span>
+        )}
+
+        <button
+          type="button"
+          onClick={handleContinue}
+          disabled={upgrading}
+          className={`${layout.buttonPrimary} ds-label-large ds-focus-ring`}
+        >
+          {upgrading ? "Redirecting…" : "Continue"}
+        </button>
+        <button
+          type="button"
+          onClick={onClose}
+          disabled={upgrading}
+          className={`${layout.buttonSecondary} ds-label-large ds-focus-ring`}
+        >
+          Maybe later
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function CloseIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+      <path d="M2 2l10 10M12 2L2 12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function StarIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M12 3.5l2.47 5.18 5.53.68-4.06 3.86 1.1 5.6L12 15.9l-4.94 2.92 1.1-5.6-4.06-3.86 5.53-.68L12 3.5z"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function CheckIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M5 12.5l4.5 4.5L19 7"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   );
 }

@@ -39,10 +39,12 @@ export default function ProjectUploadPage() {
   const [documents, setDocuments] = useState<DocumentRow[]>([]);
   const [documentLimit, setDocumentLimit] = useState(1);
   const [storageLimitBytes, setStorageLimitBytes] = useState(30 * 1024 * 1024);
+  const [readOnly, setReadOnly] = useState(false);
   const [nearCapWarningExpired, setNearCapWarningExpired] = useState(false);
   const [uploadingFiles, setUploadingFiles] = useState<UploadingFile[]>([]);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -63,7 +65,7 @@ export default function ProjectUploadPage() {
       }),
       fetch(`/api/projects/${projectId}`).then((response) => {
         if (!response.ok) throw new Error("Could not load project.");
-        return response.json() as Promise<{ name: string }>;
+        return response.json() as Promise<{ name: string; readOnly: boolean }>;
       }),
       fetch(`/api/projects/${projectId}/documents`).then((response) => {
         if (!response.ok) throw new Error("Could not load documents.");
@@ -76,6 +78,7 @@ export default function ProjectUploadPage() {
         setDocumentLimit(userData.documentLimit);
         setStorageLimitBytes(userData.storageLimitBytes);
         setProjectName(projectData.name);
+        setReadOnly(projectData.readOnly);
         setDocuments(documentsData.documents);
         setStatus("ready");
       })
@@ -222,7 +225,7 @@ export default function ProjectUploadPage() {
   function handleDrop(event: DragEvent<HTMLDivElement>) {
     event.preventDefault();
     setIsDraggingOver(false);
-    if (atCap || !event.dataTransfer.files.length) return;
+    if (readOnly || atCap || !event.dataTransfer.files.length) return;
     handleFiles(event.dataTransfer.files);
   }
 
@@ -294,21 +297,25 @@ export default function ProjectUploadPage() {
                 </div>
                 <div className={styles.runAnalysisGroup}>
                   <Link
-                    href={readyCount === 0 ? "#" : `/projects/${projectId}/insights?trigger=1`}
-                    aria-disabled={readyCount === 0}
+                    href={
+                      readOnly || readyCount === 0 ? "#" : `/projects/${projectId}/insights?trigger=1`
+                    }
+                    aria-disabled={readOnly || readyCount === 0}
                     onClick={(event) => {
-                      if (readyCount === 0) event.preventDefault();
+                      if (readOnly || readyCount === 0) event.preventDefault();
                     }}
                     className={`${styles.buttonPrimary} ds-label-large`}
-                    style={readyCount === 0 ? { opacity: 0.5, cursor: "not-allowed" } : undefined}
+                    style={readOnly || readyCount === 0 ? { opacity: 0.5, cursor: "not-allowed" } : undefined}
                   >
                     <PlayIcon />
                     Run analysis
                   </Link>
                   <span className={`${styles.runAnalysisHint} ds-label-small`}>
-                    {readyCount === 0
-                      ? "Upload at least one document to begin"
-                      : `${readyCount} document${readyCount === 1 ? "" : "s"} ready to analyze`}
+                    {readOnly
+                      ? "This project is read-only"
+                      : readyCount === 0
+                        ? "Upload at least one document to begin"
+                        : `${readyCount} document${readyCount === 1 ? "" : "s"} ready to analyze`}
                   </span>
                 </div>
               </div>
@@ -322,7 +329,25 @@ export default function ProjectUploadPage() {
                 </p>
               </div>
 
-              {atCap ? (
+              {readOnly ? (
+                <div className={styles.dropzoneLocked}>
+                  <LockIcon />
+                  <p className="ds-title-medium">This project is read-only</p>
+                  <p className={`${styles.dropzoneLockedText} ds-body-medium`}>
+                    This project is over your plan&apos;s active project limit, so uploads and
+                    analysis are disabled here. Nothing has been deleted — archive or delete another
+                    active project to free up a slot, or{" "}
+                    <button
+                      type="button"
+                      onClick={() => setShowUpgradeModal(true)}
+                      className={`${styles.linkButton} ds-body-medium`}
+                    >
+                      upgrade to Pro
+                    </button>{" "}
+                    for up to {PROJECT_LIMIT_PRO} active projects.
+                  </p>
+                </div>
+              ) : atCap ? (
                 <div className={styles.dropzoneLocked}>
                   <LockIcon />
                   <p className="ds-title-medium">You&apos;ve reached your project limit</p>
@@ -334,9 +359,13 @@ export default function ProjectUploadPage() {
                         ? "document limit"
                         : "storage limit"}
                     . Delete a file to free up space, or{" "}
-                    <Link href="/billing" className={styles.link}>
+                    <button
+                      type="button"
+                      onClick={() => setShowUpgradeModal(true)}
+                      className={`${styles.linkButton} ds-body-medium`}
+                    >
                       upgrade to Pro
-                    </Link>{" "}
+                    </button>{" "}
                     for up to {DOCUMENT_LIMIT_PRO} documents and {STORAGE_LIMIT_PRO_LABEL} per
                     project.
                   </p>
@@ -456,12 +485,15 @@ export default function ProjectUploadPage() {
           )}
         </div>
       </main>
+
+      {showUpgradeModal && <UpgradeFeaturesModal onClose={() => setShowUpgradeModal(false)} />}
     </div>
   );
 }
 
 const DOCUMENT_LIMIT_PRO = 20;
 const STORAGE_LIMIT_PRO_LABEL = "500 MB";
+const PROJECT_LIMIT_PRO = 15;
 
 function StatusBadge({ status }: { status: DocumentStatus }) {
   if (status === "READY") {
@@ -644,6 +676,144 @@ function TrashIcon() {
         d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m-9 0 1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13"
         stroke="currentColor"
         strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+const PRO_FEATURES = [
+  "15 active projects",
+  "15 analysis runs a month",
+  "500 chat messages a day",
+  "500 MB storage per project",
+  "Keep up to 5 analysis versions",
+];
+
+// Same modal as the dashboard's (app/(app)/projects/page.tsx) — duplicated
+// rather than shared, per this app's convention of keeping each page's
+// pieces self-contained.
+function UpgradeFeaturesModal({ onClose }: { onClose: () => void }) {
+  const [upgrading, setUpgrading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleContinue() {
+    setUpgrading(true);
+    setError(null);
+    try {
+      const response = await fetch("/api/billing/checkout", { method: "POST" });
+      const result: { link?: string; error?: string } = await response.json();
+      if (!response.ok || !result.link) {
+        setError(result.error ?? "Couldn't start checkout. Please try again.");
+        setUpgrading(false);
+        return;
+      }
+      window.location.href = result.link;
+    } catch {
+      setError("Couldn't start checkout. Please try again.");
+      setUpgrading(false);
+    }
+  }
+
+  return (
+    <div className={styles.modalOverlay} role="presentation" onClick={onClose}>
+      <div
+        className={`${styles.modal} ${styles.modalCentered}`}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="upgrade-features-heading"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <button
+          type="button"
+          onClick={onClose}
+          className={`${styles.dialogCloseButton} ds-focus-ring`}
+          aria-label="Close"
+        >
+          <CloseIcon />
+        </button>
+
+        <span className={`${styles.dialogIcon} ${styles.dialogIconPrimary}`}>
+          <StarIcon />
+        </span>
+
+        <h2 id="upgrade-features-heading" className="ds-title-large">
+          Upgrade to Pro
+        </h2>
+        <p className={`${styles.modalBodyText} ds-body-medium`}>
+          ₦3,000/month. Cancel anytime, no email required.
+        </p>
+
+        <ul className={styles.featureList}>
+          {PRO_FEATURES.map((feature) => (
+            <li key={feature} className={styles.featureItem}>
+              <CheckIcon />
+              <span className="ds-body-medium">{feature}</span>
+            </li>
+          ))}
+        </ul>
+
+        {error && (
+          <span className={`${styles.errorText} ds-label-medium`} role="alert">
+            {error}
+          </span>
+        )}
+
+        <button
+          type="button"
+          onClick={handleContinue}
+          disabled={upgrading}
+          className={`${styles.buttonPrimary} ds-label-large ds-focus-ring`}
+        >
+          {upgrading ? "Redirecting…" : "Continue"}
+        </button>
+        <button
+          type="button"
+          onClick={onClose}
+          disabled={upgrading}
+          className={`${styles.buttonSecondary} ds-label-large ds-focus-ring`}
+        >
+          Maybe later
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function CloseIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+      <path
+        d="M2 2l10 10M12 2L2 12"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function StarIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M12 3.5l2.47 5.18 5.53.68-4.06 3.86 1.1 5.6L12 15.9l-4.94 2.92 1.1-5.6-4.06-3.86 5.53-.68L12 3.5z"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function CheckIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M5 12.5l4.5 4.5L19 7"
+        stroke="currentColor"
+        strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
       />

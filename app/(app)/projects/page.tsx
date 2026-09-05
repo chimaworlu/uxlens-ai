@@ -5,9 +5,6 @@ import {
   useEffect,
   useRef,
   useState,
-  type ChangeEvent,
-  type ClipboardEvent,
-  type KeyboardEvent,
   type SubmitEvent,
 } from "react";
 import Link from "next/link";
@@ -25,14 +22,13 @@ type Project = {
   documentCount: number;
   analysisStatus: AnalysisStatus | null;
   analysisCompletedAt: string | null;
+  readOnly: boolean;
 };
 
 export default function DashboardPage() {
   const router = useRouter();
   const [status, setStatus] = useState<Status>("loading");
   const [name, setName] = useState<string | null>(null);
-  const [email, setEmail] = useState("");
-  const [verified, setVerified] = useState(false);
   const [projectLimit, setProjectLimit] = useState(3);
   const [projects, setProjects] = useState<Project[]>([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -47,8 +43,6 @@ export default function DashboardPage() {
         if (!response.ok) throw new Error("Could not load account.");
         return response.json() as Promise<{
           name: string | null;
-          email: string;
-          verified: boolean;
           projectLimit: number;
         }>;
       }),
@@ -58,8 +52,6 @@ export default function DashboardPage() {
       }),
     ]).then(([userData, projectsData]) => {
       setName(userData.name);
-      setEmail(userData.email);
-      setVerified(userData.verified);
       setProjectLimit(userData.projectLimit);
       setProjects(projectsData.projects);
     });
@@ -131,10 +123,6 @@ export default function DashboardPage() {
     }
   }
 
-  function showVerificationSnackbar() {
-    setSnackbarMessage("Email Verified Successfully!");
-  }
-
   return (
     <div className={styles.page}>
       <nav className={styles.nav}>
@@ -182,51 +170,24 @@ export default function DashboardPage() {
               </div>
 
               {projects.length === 0 ? (
-                // The banner overlays here rather than sitting in normal
-                // flow, so the empty state below always centers itself
-                // against the full available height — its position can't
-                // shift depending on whether the banner happens to be
-                // showing or dismissed.
-                <div className={styles.contentBody}>
-                  {!verified && (
-                    <div className={styles.bannerOverlay}>
-                      <VerifyEmailBanner
-                        email={email}
-                        onVerified={() => {
-                          setVerified(true);
-                          showVerificationSnackbar();
-                        }}
-                      />
-                    </div>
-                  )}
-                  <div className={styles.emptyState}>
-                    <EmptyStateIcon />
-                    <h2 className="ds-title-large">No projects yet</h2>
-                    <p className="ds-body-medium">
-                      Create your first project to upload research documents and get
-                      themed, cited findings back in minutes.
-                    </p>
-                    <button
-                      type="button"
-                      onClick={handleNewProjectClick}
-                      className={`${styles.buttonPrimary} ds-label-large ds-focus-ring`}
-                    >
-                      <PlusIcon />
-                      Create your first project
-                    </button>
-                  </div>
+                <div className={styles.emptyState}>
+                  <EmptyStateIcon />
+                  <h2 className="ds-title-large">No projects yet</h2>
+                  <p className="ds-body-medium">
+                    Create your first project to upload research documents and get
+                    themed, cited findings back in minutes.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleNewProjectClick}
+                    className={`${styles.buttonPrimary} ds-label-large ds-focus-ring`}
+                  >
+                    <PlusIcon />
+                    Create your first project
+                  </button>
                 </div>
               ) : (
                 <>
-                  {!verified && (
-                    <VerifyEmailBanner
-                      email={email}
-                      onVerified={() => {
-                        setVerified(true);
-                        showVerificationSnackbar();
-                      }}
-                    />
-                  )}
                   <ul className={styles.projectGrid}>
                     {projects.map((project) => (
                       <ProjectCard
@@ -329,6 +290,7 @@ function CreateProjectModal({
         documentCount: 0,
         analysisStatus: null,
         analysisCompletedAt: null,
+        readOnly: false,
       });
     } catch {
       setError("Something went wrong. Please try again.");
@@ -453,14 +415,19 @@ function ProjectCard({
   return (
     <li className={styles.projectCard}>
       <div className={styles.cardHeader}>
-        {meta ? (
-          <span className={`${styles.badge} ${STATUS_BADGE_CLASS[meta.tone]} ds-label-small`}>
-            {meta.tone === "processing" && <ProcessingIcon />}
-            {meta.label}
-          </span>
-        ) : (
-          <span />
-        )}
+        <div className={styles.badgeGroup}>
+          {meta && (
+            <span className={`${styles.badge} ${STATUS_BADGE_CLASS[meta.tone]} ds-label-small`}>
+              {meta.tone === "processing" && <ProcessingIcon />}
+              {meta.label}
+            </span>
+          )}
+          {project.readOnly && (
+            <span className={`${styles.badge} ${styles.badgeReadOnly} ds-label-small`}>
+              Read-only
+            </span>
+          )}
+        </div>
 
         <div className={styles.kebabWrap} ref={menuRef}>
           <button
@@ -643,7 +610,7 @@ function UpgradeFeaturesModal({ onClose }: { onClose: () => void }) {
 
 const PRO_FEATURES = [
   "15 active projects",
-  "30 analysis runs a month",
+  "15 analysis runs a month",
   "500 chat messages a day",
   "500 MB storage per project",
   "Keep up to 5 analysis versions",
@@ -790,183 +757,6 @@ function EmptyStateIcon() {
   );
 }
 
-function VerifyEmailBanner({
-  email,
-  onVerified,
-}: {
-  email: string;
-  onVerified: () => void;
-}) {
-  // sessionStorage, not plain state: dismissal should survive navigating
-  // around within the same browser session, but reset the moment a new
-  // one starts (browser closed and reopened) — sessionStorage is cleared
-  // exactly on that boundary, which is exactly the behavior wanted. Keyed
-  // per email so a shared browser can't leak one account's dismissal to
-  // another.
-  const dismissKey = `verify-banner-dismissed:${email}`;
-  const [dismissed, setDismissed] = useState(() => {
-    if (typeof window === "undefined") return false;
-    return sessionStorage.getItem(dismissKey) === "true";
-  });
-  const [expanded, setExpanded] = useState(false);
-  const [sending, setSending] = useState(false);
-  const [code, setCode] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  // Doubles as the initial "Verify" trigger and the later "Resend code"
-  // link — nothing is sent at sign-up, so both paths go through the same
-  // background job.
-  async function handleSend() {
-    setError(null);
-    setCode("");
-    setSending(true);
-    try {
-      const response = await fetch("/api/auth/verify/resend", { method: "POST" });
-      const data: { error?: string } = await response.json();
-      if (!response.ok) {
-        setError(data.error ?? "Could not send the verification email.");
-        return;
-      }
-      setExpanded(true);
-    } catch {
-      setError("Could not send the verification email.");
-    } finally {
-      setSending(false);
-    }
-  }
-
-  // Auto-submits the moment all 6 digits are in — no separate submit
-  // button, matching how OTP entry works in most modern apps.
-  useEffect(() => {
-    if (code.length !== OTP_LENGTH) {
-      return;
-    }
-
-    let cancelled = false;
-
-    async function verify() {
-      setError(null);
-      setSubmitting(true);
-      try {
-        const response = await fetch("/api/auth/verify", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ code }),
-        });
-        const data: { error?: string } = await response.json();
-        if (cancelled) return;
-        if (!response.ok) {
-          setError(data.error ?? "Something went wrong. Please try again.");
-          setCode("");
-          return;
-        }
-        onVerified();
-      } catch {
-        if (!cancelled) {
-          setError("Something went wrong. Please try again.");
-          setCode("");
-        }
-      } finally {
-        if (!cancelled) setSubmitting(false);
-      }
-    }
-
-    verify();
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [code]);
-
-  // Dismissing just hides the nudge for the rest of this browser session —
-  // it's not gating anything, so there's nothing to "unlock" by keeping it
-  // on screen. Persisted in sessionStorage (see dismissKey above), not a
-  // database, so it reappears once a new browser session starts, same as
-  // it would on a real site that reminds you again next time rather than
-  // never again.
-  if (dismissed) {
-    return null;
-  }
-
-  return (
-    <div className={styles.banner}>
-      <button
-        type="button"
-        onClick={() => {
-          setDismissed(true);
-          sessionStorage.setItem(dismissKey, "true");
-        }}
-        aria-label="Dismiss verify email notice"
-        className={`${styles.dismissButton} ds-focus-ring`}
-      >
-        <CloseIcon />
-      </button>
-
-      <div className={styles.bannerRow}>
-        <span className={styles.iconBadge}>
-          <MailIcon />
-        </span>
-
-        <div className={styles.bannerBody}>
-          <div className={styles.bannerHeaderRow}>
-            <div>
-              <p className={`${styles.bannerHeading} ds-label-large`}>
-                Verify your email address
-              </p>
-              <p className={`${styles.bannerSubtext} ds-body-medium`}>
-                {sending ? (
-                  <>
-                    Sending a code to <strong>{email}</strong>…
-                  </>
-                ) : expanded ? (
-                  <>
-                    We sent a code to <strong>{email}</strong>.
-                  </>
-                ) : (
-                  "Confirm your email to unlock full access."
-                )}
-              </p>
-            </div>
-
-            {!expanded && (
-              <button
-                type="button"
-                onClick={handleSend}
-                disabled={sending}
-                className={`${styles.verifyButton} ds-label-large ds-focus-ring`}
-              >
-                Verify
-              </button>
-            )}
-          </div>
-
-          {expanded && (
-            <div className={styles.otpSection}>
-              <OtpInput value={code} onChange={setCode} autoFocus />
-
-              {error && (
-                <span className={`${styles.errorText} ds-label-medium`} role="alert">
-                  {error}
-                </span>
-              )}
-
-              <button
-                type="button"
-                onClick={handleSend}
-                disabled={sending || submitting}
-                className={`${styles.resendLink} ds-label-medium ds-focus-ring`}
-              >
-                {sending ? "Sending…" : submitting ? "Verifying…" : "Resend code"}
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function Snackbar({
   message,
   onClose,
@@ -994,90 +784,6 @@ function Snackbar({
         <CloseIcon />
       </button>
     </div>
-  );
-}
-
-const OTP_LENGTH = 6;
-
-function OtpInput({
-  value,
-  onChange,
-  autoFocus,
-}: {
-  value: string;
-  onChange: (value: string) => void;
-  autoFocus?: boolean;
-}) {
-  const boxRefs = useRef<(HTMLInputElement | null)[]>([]);
-
-  function setDigit(index: number, digit: string) {
-    const chars = value.padEnd(OTP_LENGTH, " ").split("");
-    chars[index] = digit;
-    onChange(chars.join("").trimEnd());
-  }
-
-  function handleChange(index: number, event: ChangeEvent<HTMLInputElement>) {
-    const digits = event.target.value.replace(/\D/g, "");
-    if (!digits) {
-      setDigit(index, "");
-      return;
-    }
-    setDigit(index, digits[digits.length - 1] ?? "");
-    if (index < OTP_LENGTH - 1) {
-      boxRefs.current[index + 1]?.focus();
-    }
-  }
-
-  function handleKeyDown(index: number, event: KeyboardEvent<HTMLInputElement>) {
-    if (event.key === "Backspace" && !value[index] && index > 0) {
-      boxRefs.current[index - 1]?.focus();
-    }
-  }
-
-  function handlePaste(event: ClipboardEvent<HTMLInputElement>) {
-    event.preventDefault();
-    const digits = event.clipboardData.getData("text").replace(/\D/g, "").slice(0, OTP_LENGTH);
-    if (!digits) return;
-    onChange(digits);
-    boxRefs.current[Math.min(digits.length, OTP_LENGTH - 1)]?.focus();
-  }
-
-  return (
-    <div className={styles.otpInput}>
-      {Array.from({ length: OTP_LENGTH }, (_, index) => (
-        <input
-          key={index}
-          ref={(el) => {
-            boxRefs.current[index] = el;
-          }}
-          type="text"
-          inputMode="numeric"
-          maxLength={1}
-          value={value[index] ?? ""}
-          onChange={(event) => handleChange(index, event)}
-          onKeyDown={(event) => handleKeyDown(index, event)}
-          onPaste={handlePaste}
-          autoFocus={autoFocus && index === 0}
-          className={`${styles.otpBox} ds-focus-ring`}
-          aria-label={`Digit ${index + 1} of verification code`}
-        />
-      ))}
-    </div>
-  );
-}
-
-function MailIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <rect x="3" y="5" width="18" height="14" rx="2" stroke="currentColor" strokeWidth="1.6" />
-      <path
-        d="M3 7l9 6 9-6"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
   );
 }
 

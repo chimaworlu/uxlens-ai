@@ -1,6 +1,17 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useRef, useState, type RefObject } from "react";
+import {
+  Suspense,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type ClipboardEvent,
+  type KeyboardEvent,
+  type RefObject,
+  type SubmitEvent,
+} from "react";
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import layout from "../upload.module.css";
@@ -8,7 +19,14 @@ import styles from "./insights.module.css";
 import { CitationPanel, type CitationDetail } from "../CitationPanel";
 
 type AnalysisStatus = "QUEUED" | "PROCESSING" | "READY" | "FAILED" | "STALE";
-type Refusal = "too-little" | "too-much" | "quota" | "in-progress";
+type Refusal =
+  | "too-little"
+  | "too-much"
+  | "quota"
+  | "in-progress"
+  | "unverified"
+  | "read-only"
+  | "ai-spend";
 type InsightType = "THEME" | "PAIN_POINT" | "SUGGESTION" | "CONTRADICTION";
 
 type StatusResponse =
@@ -94,17 +112,29 @@ function ProjectInsightsContent() {
 
   const [projectName, setProjectName] = useState("");
   const [plan, setPlan] = useState<"FREE" | "PRO">("FREE");
+  const [email, setEmail] = useState("");
   const [emailVerified, setEmailVerified] = useState(true);
   const [hasDocuments, setHasDocuments] = useState(true);
   const [pageStatus, setPageStatus] = useState<"loading" | "ready" | "error">("loading");
   const [view, setView] = useState<ViewState>({ kind: "loading" });
   const [versions, setVersions] = useState<VersionEntry[]>([]);
   const [versionMenuOpen, setVersionMenuOpen] = useState(false);
+  const [showOverflowMenu, setShowOverflowMenu] = useState(false);
   const [activeCitationId, setActiveCitationId] = useState<string | null>(null);
   const [activeCitation, setActiveCitation] = useState<CitationDetail | null>(null);
   const [citationLoading, setCitationLoading] = useState(false);
+  // FR-2 verification gate on running/re-running analysis (see
+  // triggerAnalysis below): sendingVerifyCode/verifyLinkError cover the
+  // "Verify your email" link itself (send-then-open, same pattern as the
+  // sign-up flow's "Verify email" link); the modal has its own internal
+  // state once open.
+  const [showVerifyModal, setShowVerifyModal] = useState(false);
+  const [sendingVerifyCode, setSendingVerifyCode] = useState(false);
+  const [verifyLinkError, setVerifyLinkError] = useState<string | null>(null);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const pollTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const versionMenuRef = useRef<HTMLDivElement | null>(null);
+  const overflowMenuRef = useRef<HTMLDivElement | null>(null);
 
   const loadAnalysis = useCallback(async (analysisId: string) => {
     const response = await fetch(`/api/analyses/${analysisId}`);
@@ -148,7 +178,27 @@ function ProjectInsightsContent() {
     await Promise.all([loadAnalysis(data.analysisId), loadVersions()]);
   }, [projectId, loadAnalysis, loadVersions]);
 
-  const triggerAnalysis = useCallback(async () => {
+  const triggerAnalysis = useCallback(async (options?: { verified?: boolean }) => {
+    // FR-2: checked client-side first (not just left to the server's own
+    // 403 — see app/api/projects/[id]/analysis/route.ts) so both the
+    // first-run "Run analysis" button and the top-nav "Re-run analysis"
+    // button funnel through this one gate rather than one of them relying
+    // on a round-trip failure. Re-checked here (not just hidden/disabled
+    // in the UI) because emailVerified can flip back to false after an
+    // email change (FR-39), including for an account that already has a
+    // completed analysis.
+    //
+    // options?.verified lets a caller assert "yes, definitely verified"
+    // instead of relying on the closed-over emailVerified state: right
+    // after setEmailVerified(true), this callback is still the one from
+    // the prior render (state updates aren't visible mid-handler), so
+    // reading emailVerified here would see the stale `false` and bounce
+    // straight back to the refusal view. See handleEmailVerified below.
+    const verified = options?.verified ?? emailVerified;
+    if (!verified) {
+      setView({ kind: "refusal", reason: "unverified" });
+      return;
+    }
     setView({ kind: "in-progress", progressStage: null });
     const response = await fetch(`/api/projects/${projectId}/analysis`, { method: "POST" });
 
@@ -166,10 +216,47 @@ function ProjectInsightsContent() {
       setView({ kind: "refusal", reason: "too-much" });
     } else if (response.status === 429 && data.reason === "quota") {
       setView({ kind: "refusal", reason: "quota" });
+    } else if (response.status === 403 && data.reason === "read-only") {
+      setView({ kind: "refusal", reason: "read-only" });
+    } else if (response.status === 429 && data.reason === "ai-spend") {
+      setView({ kind: "refusal", reason: "ai-spend" });
     } else {
       setView({ kind: "failed", reason: data.error ?? "Something went wrong. Please try again." });
     }
-  }, [projectId, fetchStatus]);
+  }, [projectId, fetchStatus, emailVerified]);
+
+  // Send-then-open, same pattern as the sign-up flow's "Verify email" link
+  // (app/(marketing)/auth/page.tsx's handleVerifyEmailClick): a code is
+  // sent before the modal ever opens, so the modal's own resend cooldown
+  // starts already counting down instead of a redundant first send.
+  const handleVerifyClick = useCallback(async () => {
+    setSendingVerifyCode(true);
+    setVerifyLinkError(null);
+    try {
+      const response = await fetch("/api/auth/verify/resend", { method: "POST" });
+      const data: { error?: string } = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setVerifyLinkError(data.error ?? "Could not send a verification code. Please try again.");
+        return;
+      }
+      setShowVerifyModal(true);
+    } catch {
+      setVerifyLinkError("Could not send a verification code. Please try again.");
+    } finally {
+      setSendingVerifyCode(false);
+    }
+  }, []);
+
+  const handleEmailVerified = useCallback(() => {
+    setEmailVerified(true);
+    setShowVerifyModal(false);
+    // Passing { verified: true } instead of relying on the emailVerified
+    // state just set above: triggerAnalysis's own closure over
+    // emailVerified is still `false` here (this render hasn't happened
+    // yet), so an unqualified call would immediately bounce back to the
+    // "unverified" refusal view instead of starting the run.
+    triggerAnalysis({ verified: true });
+  }, [triggerAnalysis]);
 
   const handleSelectVersion = useCallback(
     (analysisId: string) => {
@@ -250,7 +337,7 @@ function ProjectInsightsContent() {
     Promise.all([
       fetch("/api/users/status").then((response) => {
         if (!response.ok) throw new Error("Could not load account.");
-        return response.json() as Promise<{ plan: "FREE" | "PRO"; verified: boolean }>;
+        return response.json() as Promise<{ email: string; plan: "FREE" | "PRO"; verified: boolean }>;
       }),
       fetch(`/api/projects/${projectId}`).then((response) => {
         if (!response.ok) throw new Error("Could not load project.");
@@ -259,6 +346,7 @@ function ProjectInsightsContent() {
     ])
       .then(([userData, projectData]) => {
         setPlan(userData.plan);
+        setEmail(userData.email);
         setEmailVerified(userData.verified);
         setProjectName(projectData.name);
         setHasDocuments(projectData.documentCount > 0);
@@ -277,6 +365,17 @@ function ProjectInsightsContent() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [versionMenuOpen]);
+
+  useEffect(() => {
+    if (!showOverflowMenu) return;
+    function handleClickOutside(event: MouseEvent) {
+      if (overflowMenuRef.current && !overflowMenuRef.current.contains(event.target as Node)) {
+        setShowOverflowMenu(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showOverflowMenu]);
 
   useEffect(() => {
     if (pageStatus !== "ready") return;
@@ -327,6 +426,7 @@ function ProjectInsightsContent() {
                 setVersionMenuOpen(false);
                 handleSelectVersion(id);
               }}
+              onUpgradeClick={() => setShowUpgradeModal(true)}
             />
           )}
         </div>
@@ -334,21 +434,55 @@ function ProjectInsightsContent() {
           <div className={styles.navActions}>
             {isReady && (
               <>
+                {/* Desktop only (hidden on mobile via .desktopOnlyAction) —
+                    replaced below by the overflow menu on narrow viewports,
+                    same pattern as the Chat tab's top bar. */}
                 <a
                   href={`/api/analyses/${view.analysis.id}/export`}
-                  className={`${layout.buttonOutlined} ${styles.exportButton} ds-label-large`}
+                  className={`${layout.buttonOutlined} ${styles.exportButton} ${styles.desktopOnlyAction} ds-label-large`}
                 >
                   <DownloadIcon />
                   Export
                 </a>
                 <button
                   type="button"
-                  onClick={triggerAnalysis}
+                  onClick={() => triggerAnalysis()}
                   className={`${layout.buttonPrimary} ${styles.rerunButton} ds-label-large`}
                 >
                   <RerunIcon />
                   Re-run analysis
                 </button>
+
+                {/* Mobile only — collapses Export into an overflow menu next
+                    to Re-run analysis. Placed AFTER Re-run analysis, not
+                    before: with .navActions right-aligned on mobile, the
+                    trigger's right edge has to land flush with the row's
+                    own right edge so the right-anchored 160px menu below
+                    has room to open leftward without going off-screen. */}
+                <div className={styles.overflowWrap} ref={overflowMenuRef}>
+                  <button
+                    type="button"
+                    onClick={() => setShowOverflowMenu((open) => !open)}
+                    className={`${styles.overflowButton} ds-focus-ring`}
+                    aria-label="More actions"
+                    aria-haspopup="menu"
+                    aria-expanded={showOverflowMenu}
+                  >
+                    <KebabIcon />
+                  </button>
+                  {showOverflowMenu && (
+                    <div className={styles.overflowMenu} role="menu">
+                      <a
+                        href={`/api/analyses/${view.analysis.id}/export`}
+                        role="menuitem"
+                        className={`${styles.overflowMenuItem} ds-label-medium`}
+                        onClick={() => setShowOverflowMenu(false)}
+                      >
+                        Export
+                      </a>
+                    </div>
+                  )}
+                </div>
               </>
             )}
           </div>
@@ -363,7 +497,7 @@ function ProjectInsightsContent() {
               ? `${view.analysis.staleDocuments.join(", ")} was removed since this analysis ran. Results may be out of date.`
               : "A document was removed since this analysis ran. Results may be out of date."}
           </span>
-          <button type="button" onClick={triggerAnalysis} className={styles.staleBannerLink}>
+          <button type="button" onClick={() => triggerAnalysis()} className={styles.staleBannerLink}>
             Re-run
           </button>
         </div>
@@ -404,7 +538,10 @@ function ProjectInsightsContent() {
                 onOpenCitation={handleOpenCitation}
                 activeCitationId={activeCitationId}
                 hasDocuments={hasDocuments}
-                emailVerified={emailVerified}
+                onVerifyClick={handleVerifyClick}
+                sendingVerifyCode={sendingVerifyCode}
+                verifyLinkError={verifyLinkError}
+                onUpgradeClick={() => setShowUpgradeModal(true)}
               />
             </>
           )}
@@ -423,6 +560,16 @@ function ProjectInsightsContent() {
           />
         </>
       )}
+
+      {showVerifyModal && (
+        <VerifyEmailModal
+          email={email}
+          onClose={() => setShowVerifyModal(false)}
+          onVerified={handleEmailVerified}
+        />
+      )}
+
+      {showUpgradeModal && <UpgradeFeaturesModal onClose={() => setShowUpgradeModal(false)} />}
     </div>
   );
 }
@@ -436,7 +583,10 @@ function InsightsBody({
   onOpenCitation,
   activeCitationId,
   hasDocuments,
-  emailVerified,
+  onVerifyClick,
+  sendingVerifyCode,
+  verifyLinkError,
+  onUpgradeClick,
 }: {
   view: ViewState;
   projectId: string;
@@ -446,7 +596,10 @@ function InsightsBody({
   onOpenCitation: (citationId: string) => void;
   activeCitationId: string | null;
   hasDocuments: boolean;
-  emailVerified: boolean;
+  onVerifyClick: () => void;
+  sendingVerifyCode: boolean;
+  verifyLinkError: string | null;
+  onUpgradeClick: () => void;
 }) {
   const backToDocuments = `/projects/${projectId}`;
 
@@ -459,31 +612,29 @@ function InsightsBody({
   }
 
   if (view.kind === "empty") {
-    // No documents blocks before email verification does — without a
-    // document to analyze, verifying doesn't unblock anything yet.
-    const blockedOn = !hasDocuments ? "documents" : !emailVerified ? "verification" : null;
-    const heading =
-      blockedOn === "documents"
-        ? "Add a document to get started"
-        : blockedOn === "verification"
-          ? "Verify your email to continue"
-          : "Ready to analyze";
-    const message =
-      blockedOn === "documents"
-        ? "Upload at least one document before you can run an analysis."
-        : blockedOn === "verification"
-          ? "Verify your email address before you can run an analysis."
-          : "Run an analysis to turn your uploaded documents into themes, pain points, and suggestions.";
+    // Email verification is no longer checked here — clicking "Run
+    // analysis" unverified now routes through triggerAnalysis's own gate
+    // into the "unverified" refusal view below, which is where the
+    // clickable verify link actually lives. Blocking (and disabling the
+    // button) proactively still makes sense for missing documents: there's
+    // no action to offer inline for that one, just "go upload something."
+    const blockedOnDocuments = !hasDocuments;
 
     return (
       <div className={styles.emptyState}>
         <DocumentIcon />
-        <h2 className="ds-headline-small">{heading}</h2>
-        <p className="ds-body-large">{message}</p>
+        <h2 className="ds-headline-small">
+          {blockedOnDocuments ? "Add a document to get started" : "Ready to analyze"}
+        </h2>
+        <p className="ds-body-large">
+          {blockedOnDocuments
+            ? "Upload at least one document before you can run an analysis."
+            : "Run an analysis to turn your uploaded documents into themes, pain points, and suggestions."}
+        </p>
         <button
           type="button"
           onClick={onRunAnalysis}
-          disabled={blockedOn !== null}
+          disabled={blockedOnDocuments}
           className={`${layout.buttonPrimary} ds-label-large`}
         >
           Run analysis
@@ -550,13 +701,17 @@ function InsightsBody({
           </div>
           <h2 className="ds-headline-small">You&apos;ve used all your analyses this month</h2>
           <p className="ds-body-large">
-            Free plan includes 2 analysis runs a month. Upgrade to Pro for up to 30 runs a month, so
+            Free plan includes 2 analysis runs a month. Upgrade to Pro for up to 15 runs a month, so
             you can keep analyzing as your research grows.
           </p>
           <div className={styles.actions}>
-            <Link href="/billing" className={`${layout.buttonPrimary} ds-label-large`}>
+            <button
+              type="button"
+              onClick={onUpgradeClick}
+              className={`${layout.buttonPrimary} ds-label-large`}
+            >
               Upgrade to Pro
-            </Link>
+            </button>
             <Link href={backToDocuments} className={`${layout.buttonOutlined} ds-label-large`}>
               Back to documents
             </Link>
@@ -589,6 +744,76 @@ function InsightsBody({
           <p className="ds-body-large">
             This project has more content than a single analysis can process. Remove some documents
             or split into two projects.
+          </p>
+          <Link href={backToDocuments} className={`${layout.buttonOutlined} ds-label-large`}>
+            Back to documents
+          </Link>
+        </div>
+      );
+    }
+
+    if (view.reason === "unverified") {
+      return (
+        <div className={styles.emptyState}>
+          <MailIcon />
+          <h2 className="ds-headline-small">Verify your email to continue</h2>
+          <p className="ds-body-large">
+            Verify your email address before you can run an analysis.{" "}
+            <button
+              type="button"
+              onClick={onVerifyClick}
+              disabled={sendingVerifyCode}
+              className={`${styles.inlineVerifyLink} ds-label-large`}
+            >
+              {sendingVerifyCode ? "Sending…" : "Verify your email"}
+            </button>
+          </p>
+          {verifyLinkError && (
+            <span className={`${styles.errorText} ds-label-medium`} role="alert" aria-live="polite">
+              {verifyLinkError}
+            </span>
+          )}
+        </div>
+      );
+    }
+
+    if (view.reason === "read-only") {
+      return (
+        <div className={styles.emptyState}>
+          <div className={styles.lockIcon}>
+            <LockIcon />
+          </div>
+          <h2 className="ds-headline-small">This project is read-only</h2>
+          <p className="ds-body-large">
+            This project is over your plan&apos;s active project limit, so analysis is disabled here.
+            Nothing has been deleted — archive or delete another active project to free up a slot, or
+            upgrade to Pro for up to 15 active projects.
+          </p>
+          <div className={styles.actions}>
+            <button
+              type="button"
+              onClick={onUpgradeClick}
+              className={`${layout.buttonPrimary} ds-label-large`}
+            >
+              Upgrade to Pro
+            </button>
+            <Link href={backToDocuments} className={`${layout.buttonOutlined} ds-label-large`}>
+              Back to documents
+            </Link>
+          </div>
+        </div>
+      );
+    }
+
+    if (view.reason === "ai-spend") {
+      return (
+        <div className={styles.emptyState}>
+          <div className={styles.lockIcon}>
+            <LockIcon />
+          </div>
+          <h2 className="ds-headline-small">You&apos;ve reached today&apos;s usage limit</h2>
+          <p className="ds-body-large">
+            You&apos;ve used a lot of AI-powered features today. Please try again tomorrow.
           </p>
           <Link href={backToDocuments} className={`${layout.buttonOutlined} ds-label-large`}>
             Back to documents
@@ -738,6 +963,7 @@ function VersionDropdown({
   currentAnalysisId,
   plan,
   onSelect,
+  onUpgradeClick,
 }: {
   menuRef: RefObject<HTMLDivElement | null>;
   open: boolean;
@@ -746,6 +972,7 @@ function VersionDropdown({
   currentAnalysisId: string;
   plan: "FREE" | "PRO";
   onSelect: (analysisId: string) => void;
+  onUpgradeClick: () => void;
 }) {
   const current = versions.find((entry) => entry.id === currentAnalysisId);
 
@@ -792,9 +1019,9 @@ function VersionDropdown({
           {plan === "FREE" ? (
             <p className={`${styles.versionFooter} ds-label-medium`}>
               You&apos;re on the Free plan. Upgrade to Pro to keep up to 5 versions.{" "}
-              <Link href="/billing" className={styles.versionUpgradeLink}>
+              <button type="button" onClick={onUpgradeClick} className={styles.versionUpgradeLink}>
                 Upgrade
-              </Link>
+              </button>
             </p>
           ) : (
             <p className={`${styles.versionFooter} ds-label-medium`}>
@@ -900,12 +1127,27 @@ function InsightCard({
               title={`View citation in ${citation.chunk.document.filename}`}
             >
               <SmallFileIcon />
-              {citation.chunk.document.filename}
+              <span className={styles.citationChipLabel}>{citation.chunk.document.filename}</span>
             </button>
           ))}
         </div>
       )}
     </div>
+  );
+}
+
+function MailIcon() {
+  return (
+    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <rect x="3" y="5" width="18" height="14" rx="2" stroke="currentColor" strokeWidth="1.5" />
+      <path
+        d="M3 7l9 6 9-6"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   );
 }
 
@@ -992,6 +1234,16 @@ function CheckIcon() {
         />
       </svg>
     </span>
+  );
+}
+
+function KebabIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <circle cx="12" cy="5" r="1.8" />
+      <circle cx="12" cy="12" r="1.8" />
+      <circle cx="12" cy="19" r="1.8" />
+    </svg>
   );
 }
 
@@ -1087,6 +1339,404 @@ function CheckmarkIcon() {
         d="M5 13l4 4L19 7"
         stroke="currentColor"
         strokeWidth="2.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+// FR-2, on the "unverified" refusal view above: same OTP modal shape as
+// the sign-up flow's PreSignupVerifyModal (app/(marketing)/auth/page.tsx)
+// — icon, code entry, resend cooldown, success screen — but wired to the
+// authenticated verify endpoints instead of the session-less pre-signup
+// ones, since this user already has an account and a session. A code has
+// already been sent by the time this opens (see handleVerifyClick above),
+// so the enter phase's cooldown starts already counting down rather than
+// firing a redundant first send.
+const OTP_LENGTH = 6;
+
+function VerifyEmailModal({
+  email,
+  onClose,
+  onVerified,
+}: {
+  email: string;
+  onClose: () => void;
+  onVerified: () => void;
+}) {
+  const [phase, setPhase] = useState<"enter" | "success">("enter");
+  const [code, setCode] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [secondsLeft, setSecondsLeft] = useState(60);
+  const [resending, setResending] = useState(false);
+
+  useEffect(() => {
+    if (phase !== "enter" || secondsLeft <= 0) return;
+    const timer = setTimeout(() => setSecondsLeft((s) => s - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [phase, secondsLeft]);
+
+  async function handleVerify(event: SubmitEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError(null);
+    setSubmitting(true);
+    try {
+      const response = await fetch("/api/auth/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code }),
+      });
+      const data: { error?: string } = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setError(data.error ?? "Something went wrong. Please try again.");
+        setCode("");
+        return;
+      }
+      setPhase("success");
+    } catch {
+      setError("Something went wrong. Please try again.");
+      setCode("");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleResend() {
+    if (secondsLeft > 0 || resending) return;
+    setResending(true);
+    setError(null);
+    try {
+      const response = await fetch("/api/auth/verify/resend", { method: "POST" });
+      if (!response.ok) {
+        const data: { error?: string } = await response.json().catch(() => ({}));
+        setError(data.error ?? "Could not resend the code.");
+        return;
+      }
+      setSecondsLeft(60);
+    } catch {
+      setError("Could not resend the code.");
+    } finally {
+      setResending(false);
+    }
+  }
+
+  return (
+    <div className={styles.modalOverlay} role="presentation" onClick={onClose}>
+      <div
+        className={`${styles.verifyModalCard} ${phase === "success" ? styles.modalCentered : ""}`}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="verify-email-heading"
+        onClick={(event) => event.stopPropagation()}
+      >
+        {phase === "enter" ? (
+          <>
+            <span className={`${styles.dialogIcon} ${styles.dialogIconInfo}`}>
+              <InfoIcon />
+            </span>
+            <h2 id="verify-email-heading" className="ds-title-large">
+              Enter verification code
+            </h2>
+            <p className={`${styles.verifyModalBodyText} ds-body-medium`}>
+              A confirmation code has been sent to your email address at <strong>{email}</strong>. The
+              code expires in 15 minutes.
+            </p>
+
+            <form onSubmit={handleVerify} className={styles.verifyForm}>
+              <div className={styles.verifyField}>
+                {/* Not a <label htmlFor>: OtpInput renders six separate
+                    inputs, each with its own aria-label, not one labelable
+                    element a single label could point at. */}
+                <p className="ds-label-large">Enter confirmation code</p>
+                <OtpInput value={code} onChange={setCode} autoFocus />
+              </div>
+
+              {error && (
+                <span className={`${styles.errorText} ds-label-medium`} role="alert" aria-live="polite">
+                  {error}
+                </span>
+              )}
+
+              <div className={styles.resendRow}>
+                <button
+                  type="button"
+                  onClick={handleResend}
+                  disabled={secondsLeft > 0 || resending}
+                  className={`${styles.resendLink} ds-label-medium ds-focus-ring`}
+                >
+                  Resend confirmation code
+                </button>
+                {secondsLeft > 0 && <span className="ds-label-medium">in {formatCountdown(secondsLeft)}</span>}
+              </div>
+
+              <div className={styles.otpActions}>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className={`${layout.buttonOutlined} ds-label-large ds-focus-ring`}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={code.length !== OTP_LENGTH || submitting}
+                  className={`${layout.buttonPrimary} ds-label-large ds-focus-ring`}
+                >
+                  {submitting ? "Verifying…" : "Verify"}
+                </button>
+              </div>
+            </form>
+          </>
+        ) : (
+          <>
+            <span className={styles.verifiedIllustration}>
+              <VerifiedCheckIcon />
+            </span>
+            <h2 className="ds-title-large">Email verified</h2>
+            <p className={`${styles.verifyModalBodyText} ds-body-medium`}>
+              {email} is now verified.
+            </p>
+            <button
+              type="button"
+              onClick={onVerified}
+              className={`${layout.buttonPrimary} ds-label-large ds-focus-ring`}
+            >
+              Continue
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function formatCountdown(totalSeconds: number): string {
+  const minutes = Math.floor(totalSeconds / 60).toString().padStart(2, "0");
+  const seconds = (totalSeconds % 60).toString().padStart(2, "0");
+  return `${minutes}:${seconds}`;
+}
+
+function OtpInput({
+  value,
+  onChange,
+  autoFocus,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  autoFocus?: boolean;
+}) {
+  const boxRefs = useRef<(HTMLInputElement | null)[]>([]);
+
+  function setDigit(index: number, digit: string) {
+    const chars = value.padEnd(OTP_LENGTH, " ").split("");
+    chars[index] = digit;
+    onChange(chars.join("").trimEnd());
+  }
+
+  function handleChange(index: number, event: ChangeEvent<HTMLInputElement>) {
+    const digits = event.target.value.replace(/\D/g, "");
+    if (!digits) {
+      setDigit(index, "");
+      return;
+    }
+    setDigit(index, digits[digits.length - 1] ?? "");
+    if (index < OTP_LENGTH - 1) {
+      boxRefs.current[index + 1]?.focus();
+    }
+  }
+
+  function handleKeyDown(index: number, event: KeyboardEvent<HTMLInputElement>) {
+    if (event.key === "Backspace" && !value[index] && index > 0) {
+      boxRefs.current[index - 1]?.focus();
+    }
+  }
+
+  function handlePaste(event: ClipboardEvent<HTMLInputElement>) {
+    event.preventDefault();
+    const digits = event.clipboardData.getData("text").replace(/\D/g, "").slice(0, OTP_LENGTH);
+    if (!digits) return;
+    onChange(digits);
+    boxRefs.current[Math.min(digits.length, OTP_LENGTH - 1)]?.focus();
+  }
+
+  return (
+    <div className={styles.otpInput}>
+      {Array.from({ length: OTP_LENGTH }, (_, index) => (
+        <input
+          key={index}
+          ref={(el) => {
+            boxRefs.current[index] = el;
+          }}
+          type="text"
+          inputMode="numeric"
+          maxLength={1}
+          value={value[index] ?? ""}
+          onChange={(event) => handleChange(index, event)}
+          onKeyDown={(event) => handleKeyDown(index, event)}
+          onPaste={handlePaste}
+          autoFocus={autoFocus && index === 0}
+          className={`${styles.otpBox} ds-focus-ring`}
+          aria-label={`Digit ${index + 1} of verification code`}
+        />
+      ))}
+    </div>
+  );
+}
+
+function InfoIcon() {
+  return (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M12 11v5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+      <circle cx="12" cy="8" r="1" fill="currentColor" />
+    </svg>
+  );
+}
+
+function VerifiedCheckIcon() {
+  return (
+    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M6 12.5l4 4 8-9"
+        stroke="currentColor"
+        strokeWidth="3"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className={styles.verifiedBadgeCheck}
+      />
+    </svg>
+  );
+}
+
+const PRO_FEATURES = [
+  "15 active projects",
+  "15 analysis runs a month",
+  "500 chat messages a day",
+  "500 MB storage per project",
+  "Keep up to 5 analysis versions",
+];
+
+// Same modal as the dashboard's and upload page's — duplicated rather than
+// shared, per this app's convention of keeping each page's pieces
+// self-contained. Uses `layout` (upload.module.css) classes since that
+// module already has the full modal/feature-list recipe this needs.
+function UpgradeFeaturesModal({ onClose }: { onClose: () => void }) {
+  const [upgrading, setUpgrading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleContinue() {
+    setUpgrading(true);
+    setError(null);
+    try {
+      const response = await fetch("/api/billing/checkout", { method: "POST" });
+      const result: { link?: string; error?: string } = await response.json();
+      if (!response.ok || !result.link) {
+        setError(result.error ?? "Couldn't start checkout. Please try again.");
+        setUpgrading(false);
+        return;
+      }
+      window.location.href = result.link;
+    } catch {
+      setError("Couldn't start checkout. Please try again.");
+      setUpgrading(false);
+    }
+  }
+
+  return (
+    <div className={layout.modalOverlay} role="presentation" onClick={onClose}>
+      <div
+        className={`${layout.modal} ${layout.modalCentered}`}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="upgrade-features-heading"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <button
+          type="button"
+          onClick={onClose}
+          className={`${layout.dialogCloseButton} ds-focus-ring`}
+          aria-label="Close"
+        >
+          <UpgradeModalCloseIcon />
+        </button>
+
+        <span className={`${layout.dialogIcon} ${layout.dialogIconPrimary}`}>
+          <UpgradeModalStarIcon />
+        </span>
+
+        <h2 id="upgrade-features-heading" className="ds-title-large">
+          Upgrade to Pro
+        </h2>
+        <p className={`${layout.modalBodyText} ds-body-medium`}>
+          ₦3,000/month. Cancel anytime, no email required.
+        </p>
+
+        <ul className={layout.featureList}>
+          {PRO_FEATURES.map((feature) => (
+            <li key={feature} className={layout.featureItem}>
+              <UpgradeModalCheckIcon />
+              <span className="ds-body-medium">{feature}</span>
+            </li>
+          ))}
+        </ul>
+
+        {error && (
+          <span className={`${layout.errorText} ds-label-medium`} role="alert">
+            {error}
+          </span>
+        )}
+
+        <button
+          type="button"
+          onClick={handleContinue}
+          disabled={upgrading}
+          className={`${layout.buttonPrimary} ds-label-large ds-focus-ring`}
+        >
+          {upgrading ? "Redirecting…" : "Continue"}
+        </button>
+        <button
+          type="button"
+          onClick={onClose}
+          disabled={upgrading}
+          className={`${layout.buttonSecondary} ds-label-large ds-focus-ring`}
+        >
+          Maybe later
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function UpgradeModalCloseIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+      <path d="M2 2l10 10M12 2L2 12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function UpgradeModalStarIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M12 3.5l2.47 5.18 5.53.68-4.06 3.86 1.1 5.6L12 15.9l-4.94 2.92 1.1-5.6-4.06-3.86 5.53-.68L12 3.5z"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function UpgradeModalCheckIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M5 12.5l4.5 4.5L19 7"
+        stroke="currentColor"
+        strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
       />

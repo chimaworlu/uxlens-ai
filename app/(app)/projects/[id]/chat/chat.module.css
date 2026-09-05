@@ -127,6 +127,11 @@
 }
 
 .capBannerLink {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
   color: inherit;
   text-decoration: underline;
   flex-shrink: 0;
@@ -313,6 +318,24 @@
   display: flex;
   align-items: center;
   gap: var(--ds-spacing-sm);
+}
+
+/* Local equivalents of insights.module.css's .exportButton/.rerunButton
+   (icon + text spacing only) — NOT shared with them. Sharing those was
+   the actual bug behind the mobile overflow menu appearing to do nothing:
+   .exportButton's unconditional "display: inline-flex" and
+   .desktopOnlyAction's media-scoped "display: none" are both single-class
+   selectors on the same element, so it came down to a same-specificity
+   tie the unconditional rule was winning — the button never actually hid
+   on mobile, it just visually sat next to the new overflow trigger. Two
+   different rules controlling the same property on the same element from
+   two different files, one of them conditional, is exactly the kind of
+   thing that ties and silently breaks — give chat's own buttons chat's
+   own classes instead so there's nothing left to race. */
+.actionButtonIcon {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-spacing-xs);
 }
 
 /* ---------- mobile top-bar overflow menu ----------

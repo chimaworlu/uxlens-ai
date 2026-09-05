@@ -41,23 +41,6 @@
     width: 100%;
   }
 
-  .bannerHeaderRow {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .verifyButton {
-    width: 100%;
-  }
-
-  /* Verify drops onto its own full-width row below the heading here, so
-     the +5px desktop offset (centering against the heading+subtext block
-     next to Verify) no longer applies — back to lining up with just the
-     heading's top edge. */
-  .dismissButton {
-    top: var(--ds-spacing-lg);
-  }
-
   .modalOverlay {
     padding: var(--ds-spacing-md);
     align-items: flex-end;
@@ -89,21 +72,6 @@
 
   .content {
     gap: var(--ds-spacing-md);
-  }
-
-  .otpBox {
-    max-width: 40px;
-    font-size: 1.1rem;
-  }
-
-  .banner {
-    padding: var(--ds-spacing-sm) var(--ds-spacing-md);
-    padding-right: 56px;
-  }
-
-  .dismissButton {
-    top: var(--ds-spacing-sm);
-    right: var(--ds-spacing-md);
   }
 
   .content,
@@ -179,179 +147,6 @@
 .quotaText {
   margin-top: var(--ds-spacing-xs);
   color: var(--color-roles-on-surface-variant);
-}
-
-/* ---------- verify banner ---------- Notification-card pattern, never a
-   blocking gate — dismissible at every stage. */
-.banner {
-  position: relative;
-  background-color: var(--color-roles-surface-container-low);
-  border: var(--ds-hairline-border);
-  border-radius: var(--ds-radius-medium);
-  padding: var(--ds-spacing-lg);
-  /* Reserves room for the absolutely-positioned dismiss button (offset
-     right: var(--ds-spacing-lg), width 28px) so it never overlaps the
-     heading or Verify button next to it. */
-  padding-right: 64px;
-}
-
-.bannerRow {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--ds-spacing-md);
-}
-
-.iconBadge {
-  flex-shrink: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  border-radius: var(--ds-radius-full);
-  background-color: var(--color-roles-primary-container);
-  color: var(--color-roles-on-primary-container);
-}
-
-.bannerBody {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: var(--ds-spacing-md);
-}
-
-.bannerHeaderRow {
-  display: flex;
-  /* center, not flex-start: Verify should sit centered against the full
-     two-line heading+subtext block (matching the icon badge beside it),
-     not pinned to just the heading's top edge — see .dismissButton's own
-     offset below, tuned to land on this same center line. */
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--ds-spacing-md);
-  flex-wrap: wrap;
-}
-
-.bannerHeading {
-  margin: 0;
-  color: var(--color-roles-on-surface);
-}
-
-.bannerSubtext {
-  margin: 0;
-  color: var(--color-roles-on-surface-variant);
-}
-
-.verifyButton {
-  flex-shrink: 0;
-  background: none;
-  cursor: pointer;
-  border: 1.5px solid var(--color-roles-primary);
-  color: var(--color-roles-primary);
-  border-radius: var(--ds-radius-medium);
-  padding: var(--ds-spacing-xs) var(--ds-spacing-lg);
-}
-
-.verifyButton:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-/* Pinned to the card's corner rather than laid out alongside the heading/
-   Verify button: those wrap onto their own line at narrow widths (see the
-   mobile breakpoint below), and a flex sibling in that row would wrap —
-   and visually drift — right along with them.
-
-   32px, not an arbitrary icon-button size: .verifyButton's own box (21px
-   ds-label-large line-height + 2 * 4px padding + 2 * 1.5px border) also
-   renders at 32px tall, so the two share a size instead of one dwarfing
-   the other.
-
-   top offset: .bannerHeaderRow now centers Verify against the full
-   heading+subtext block (21px + 21px line-heights = 42px), which puts
-   Verify's own center 5px below the block's top ((42 - 32) / 2). Adding
-   that same 5px to .banner's padding lands this button's center on that
-   identical line, instead of both just sharing a top edge. */
-.dismissButton {
-  position: absolute;
-  top: calc(var(--ds-spacing-lg) + 5px);
-  right: var(--ds-spacing-lg);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  background: none;
-  border: 1px solid transparent;
-  border-radius: var(--ds-radius-small);
-  padding: 0;
-  cursor: pointer;
-  color: var(--color-roles-on-surface-variant);
-}
-
-.dismissButton svg {
-  display: block;
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .verifyButton:hover:not(:disabled) {
-    background-color: var(--color-roles-primary-container);
-  }
-
-  .dismissButton:hover {
-    color: var(--color-roles-on-surface);
-  }
-}
-
-.otpSection {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--ds-spacing-sm);
-}
-
-/* Six individual boxes, not one wide letter-spaced field — the standard
-   OTP pattern modern apps use, and one that never has an oversized empty
-   field stretching awkwardly on narrow screens. */
-.otpInput {
-  display: flex;
-  gap: var(--ds-spacing-xs);
-}
-
-/* flex: 1 1 0 + min-width: 0, not a fixed width: text inputs have a
-   browser-default intrinsic minimum size that a fixed width doesn't
-   override under flex-shrink, so on a narrow card the focused box (which
-   needs room for a blinking cursor) would refuse to shrink while the
-   other five collapsed to near-nothing beside it. Equal flex-basis with
-   min-width explicitly zeroed forces all six to stay genuinely equal
-   width no matter how little room is available; max-width just caps how
-   big they get on a roomy desktop banner. aspect-ratio keeps them square
-   at whatever width that resolves to, instead of a fixed height that'd
-   look like a tall sliver once width drops below it. */
-.otpBox {
-  flex: 1 1 0;
-  min-width: 0;
-  max-width: 48px;
-  aspect-ratio: 1 / 1;
-  text-align: center;
-  font: inherit;
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: var(--color-roles-on-surface);
-  background-color: var(--color-roles-surface-container-lowest);
-  border: var(--ds-hairline-border);
-  border-radius: var(--ds-radius-medium);
-  padding: 0;
-}
-
-.otpBox:focus {
-  border-color: var(--color-roles-primary);
-}
-
-.otpSection .resendLink {
-  align-self: flex-start;
-  color: var(--color-roles-primary);
 }
 
 .buttonPrimary {
@@ -434,26 +229,6 @@
   background: none;
   color: inherit;
   cursor: pointer;
-}
-
-/* Fills the space below the title row; .bannerOverlay (if present) floats
-   on top of this rather than sitting in its normal flow, so .emptyState's
-   centering below is always computed against this container's full
-   height — never shifted by whether the banner happens to be showing. */
-.contentBody {
-  position: relative;
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-.bannerOverlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 1;
 }
 
 .emptyState {
@@ -629,6 +404,20 @@
 .badgeFailed {
   background-color: var(--color-roles-error-container);
   color: var(--color-roles-on-error-container);
+}
+
+.badgeReadOnly {
+  background-color: var(--color-roles-tertiary-container);
+  color: var(--color-roles-on-tertiary-container);
+}
+
+/* Holds the analysis-status badge and the FR-36 read-only badge side by
+   side — a project can be both at once (e.g. STALE and read-only). */
+.badgeGroup {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-spacing-xs);
+  flex-wrap: wrap;
 }
 
 .kebabWrap {

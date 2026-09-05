@@ -4,7 +4,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db/prisma";
 import { buildDocumentKey, getPresignedUploadUrl } from "@/lib/storage/r2";
 import { resolveDocumentType, contentTypeFor } from "@/lib/validation/document-type";
-import { checkDocumentQuota, QuotaExceededError } from "@/lib/quota/checks";
+import { checkDocumentQuota, checkProjectWritable, QuotaExceededError } from "@/lib/quota/checks";
 import { checkRateLimit } from "@/lib/security/rate-limit";
 import { getSessionUserId } from "@/lib/auth/session";
 
@@ -48,6 +48,18 @@ export async function POST(
     select: { id: true },
   });
   if (!project) return NextResponse.json({ error: "Project not found." }, { status: 404 });
+
+  // FR-36: a project over the plan's active-project cap is read-only —
+  // checked before the per-file validation below, since none of that
+  // matters if uploading here isn't allowed at all.
+  try {
+    await checkProjectWritable(userId, projectId);
+  } catch (error) {
+    if (error instanceof QuotaExceededError) {
+      return NextResponse.json({ error: error.message, reason: "read-only" }, { status: 403 });
+    }
+    throw error;
+  }
 
   const documentType = resolveDocumentType(filename);
   if (!documentType) {

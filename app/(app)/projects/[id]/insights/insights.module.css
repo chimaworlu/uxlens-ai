@@ -149,7 +149,8 @@
   gap: var(--ds-spacing-lg);
 }
 
-/* ---------- top-bar actions (Insights/Chat only, per nav rules) ---------- */
+/* ---------- top-bar actions (Insights only, per nav rules — Chat has its
+   own equivalent copy in chat.module.css, not shared with this one) ---------- */
 .navActions {
   display: flex;
   align-items: center;
@@ -248,6 +249,11 @@
 }
 
 .versionUpgradeLink {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
   color: var(--color-roles-primary);
   text-decoration: underline;
 }
@@ -262,6 +268,74 @@
   display: inline-flex;
   align-items: center;
   gap: var(--ds-spacing-xs);
+}
+
+/* ---------- mobile top-bar overflow menu ----------
+   Same pattern as chat.module.css's version: Export collapses into a
+   small overflow menu next to Re-run analysis on narrow viewports, since
+   Re-run analysis is the primary action and stays a full, visible button
+   either way. The trigger is the LAST element in .navActions (after
+   Re-run analysis) so its right edge lands flush with the row's own right
+   edge once .navActions is right-aligned on mobile below — that's what
+   keeps the right-anchored 160px menu on-screen instead of computing a
+   negative left edge. */
+.overflowWrap {
+  position: relative;
+  display: none;
+}
+
+.overflowButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  background: none;
+  border: var(--ds-hairline-border);
+  border-radius: var(--ds-radius-medium);
+  padding: 0;
+  cursor: pointer;
+  color: var(--color-roles-on-surface-variant);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .overflowButton:hover {
+    color: var(--color-roles-on-surface);
+    background-color: var(--color-roles-surface-container-low);
+  }
+}
+
+.overflowMenu {
+  position: absolute;
+  top: calc(100% + var(--ds-spacing-xs));
+  right: 0;
+  min-width: 160px;
+  background-color: var(--color-roles-surface-container-lowest);
+  border: var(--ds-hairline-border);
+  border-radius: var(--ds-radius-small);
+  box-shadow: var(--effect-button-shadow-soft);
+  padding: var(--ds-spacing-xs);
+  z-index: 5;
+}
+
+.overflowMenuItem {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--color-roles-on-surface);
+  text-decoration: none;
+  border-radius: var(--ds-radius-small);
+  padding: var(--ds-spacing-sm);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .overflowMenuItem:hover {
+    background-color: var(--color-roles-surface-container-low);
+  }
 }
 
 /* ---------- stale banner ---------- */
@@ -467,6 +541,7 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
+  max-width: 220px;
   background-color: var(--color-roles-primary-container);
   color: var(--color-roles-on-primary-container);
   border: none;
@@ -474,6 +549,24 @@
   padding: 4px var(--ds-spacing-sm);
   cursor: pointer;
   font-size: 0.8125rem;
+}
+
+.citationChip svg {
+  flex-shrink: 0;
+}
+
+/* The filename needs its own element for text-overflow: ellipsis to work
+   correctly — .citationChip is a flex row (icon + filename), and
+   text-overflow only truncates a block/inline-block's own overflowed
+   text, not one specific child of a flex container while leaving its
+   sibling (the icon) alone. min-width: 0 overrides a flex item's default
+   min-width: auto, which would otherwise let this span grow past its
+   flex-basis to fit the text instead of actually truncating. */
+.citationChipLabel {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  min-width: 0;
 }
 
 .citationChipActive {
@@ -559,6 +652,18 @@
 }
 
 .citationSourceChip {
+  /* .citationPanel is a COLUMN flex container, so height is its main
+     axis. A flex item with overflow != visible (needed here for the
+     ellipsis) gets an automatic minimum size of 0 on the main axis — so
+     when a citation's total content (long excerpt, several "other
+     sources" chips) is taller than the panel's fixed viewport height,
+     the flex-shrink algorithm is free to compress this pill all the way
+     down to its padding instead of the panel just scrolling
+     (overflow-y: auto on .citationPanel), producing a collapsed,
+     textless bar. flex-shrink: 0 opts this item out of that squeeze —
+     it should never shrink, only the panel should scroll. */
+  flex-shrink: 0;
+  min-width: 0;
   align-self: flex-start;
   max-width: 100%;
   overflow: hidden;
@@ -660,22 +765,24 @@
     width: min(240px, calc(100vw - 2 * var(--ds-spacing-lg)));
   }
 
-  /* Export and Re-run are grouped tight together with a small gap on
-     desktop because they share the nav row with the brand/breadcrumb on
-     one side of a space-between. On mobile they get a row of their own
-     (layout.nav wraps), so that same tight grouping just left them bunched
-     up near the left edge with dead space on the right — the design fills
-     the row with them instead, split evenly (flex: 1 on each), not sized
-     to their own text — deterministic regardless of "Export" vs "Re-run"
-     being different lengths, rather than relying on natural width plus
-     space-between to happen to land close to that. */
+  /* Export and Re-run share the nav row with the brand/breadcrumb on
+     desktop; on mobile they get a row of their own (layout.nav wraps).
+     Matches the Chat tab's top bar: Export collapses into the overflow
+     menu, Re-run analysis stays full and visible, both pinned to the
+     row's right edge (not stretched to fill it — see the overflow-menu
+     comment above for why the trigger specifically needs to be last and
+     right-aligned, not just "on mobile"). */
   .navActions {
     width: 100%;
+    justify-content: flex-end;
   }
 
-  .navActions > a,
-  .navActions > button {
-    flex: 1;
+  .desktopOnlyAction {
+    display: none;
+  }
+
+  .overflowWrap {
+    display: inline-flex;
   }
 
   .insightsLayout {
@@ -706,5 +813,212 @@
   .insightsNavItem {
     flex-shrink: 0;
     white-space: nowrap;
+  }
+}
+
+.errorText {
+  color: var(--color-roles-error);
+}
+
+/* Inline text link inside the "unverified" refusal message — deliberately
+   not a button-shaped CTA (border/background), since it needs to read as
+   part of the sentence it sits in, the same way the sign-up form's
+   "Verify email" link does. */
+.inlineVerifyLink {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: var(--color-roles-primary);
+  text-decoration: underline;
+}
+
+.inlineVerifyLink:disabled {
+  color: var(--color-roles-on-surface-variant);
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ---------- verify email modal ----------
+   Same shape/behavior as the sign-up flow's PreSignupVerifyModal
+   (app/(marketing)/auth/auth.module.css) — duplicated here rather than
+   imported, matching how this app handles every other per-page modal. */
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgb(0 0 0 / 0.4);
+  padding: var(--ds-spacing-lg);
+  z-index: 30;
+}
+
+.verifyModalCard {
+  width: 100%;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-spacing-md);
+  background-color: var(--color-roles-surface-container-lowest);
+  border-radius: var(--ds-radius-large);
+  box-shadow: var(--effect-button-shadow-soft);
+  padding: var(--ds-spacing-xl);
+}
+
+.modalCentered {
+  position: relative;
+  align-items: center;
+  text-align: center;
+}
+
+.dialogIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--ds-radius-full);
+}
+
+.dialogIconInfo {
+  background-color: var(--color-roles-primary-container);
+  color: var(--color-roles-on-primary-container);
+}
+
+.verifyModalBodyText {
+  margin: 0;
+  color: var(--color-roles-on-surface-variant);
+}
+
+.verifyForm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-spacing-md);
+}
+
+.verifyField {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-spacing-xs);
+}
+
+.otpInput {
+  display: flex;
+  gap: var(--ds-spacing-xs);
+}
+
+.otpBox {
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 48px;
+  aspect-ratio: 1 / 1;
+  text-align: center;
+  font: inherit;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--color-roles-on-surface);
+  background-color: var(--color-roles-surface-container-lowest);
+  border: var(--ds-hairline-border);
+  border-radius: var(--ds-radius-medium);
+  padding: 0;
+}
+
+.otpBox:focus {
+  border-color: var(--color-roles-primary);
+}
+
+.resendRow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ds-spacing-xs);
+  color: var(--color-roles-on-surface-variant);
+}
+
+.resendLink {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: var(--color-roles-primary);
+}
+
+.resendLink:disabled {
+  color: var(--color-roles-on-surface-variant);
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.otpActions {
+  display: flex;
+  gap: var(--ds-spacing-sm);
+}
+
+.verifiedIllustration {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 80px;
+  height: 80px;
+  border-radius: var(--ds-radius-full);
+  background-color: var(--color-roles-success);
+  color: var(--color-roles-on-success);
+  animation: verifiedPopIn 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes verifiedPopIn {
+  0% {
+    transform: scale(0.5);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.08);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes verifiedDraw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* Dasharray is the checkmark path's approximate length (two segments,
+   4,4 then 8,-9 ⇒ √32 + √145 ≈ 17.7, rounded up to 19 for a small margin)
+   — delayed slightly so the circle's pop-in settles first, then the check
+   strokes in, same technique most "verified" Lottie animations use. */
+.verifiedBadgeCheck {
+  stroke-dasharray: 19;
+  stroke-dashoffset: 19;
+  animation: verifiedDraw 0.3s ease-out 0.25s forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .verifiedIllustration,
+  .verifiedBadgeCheck {
+    animation: none;
+  }
+
+  .verifiedBadgeCheck {
+    stroke-dashoffset: 0;
+  }
+}
+
+@media (max-width: 720px) {
+  .modalOverlay {
+    padding: var(--ds-spacing-md);
+  }
+
+  .verifyModalCard {
+    max-width: 100%;
+    padding: var(--ds-spacing-lg);
+  }
+
+  .otpActions {
+    flex-direction: column;
   }
 }

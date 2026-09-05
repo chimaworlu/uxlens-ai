@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db/prisma";
 import { enqueueR2Cleanup } from "@/lib/queue/cleanup";
+import { isProjectReadOnly } from "@/lib/quota/checks";
 import { getSessionUserId } from "@/lib/auth/session";
 
 export async function GET(
@@ -20,8 +21,14 @@ export async function GET(
     return NextResponse.json({ error: "Project not found." }, { status: 404 });
   }
 
+  // FR-36: surfaced here so the upload/insights views can show the
+  // read-only state proactively on load, the same way they already do
+  // for the document/storage caps, instead of only discovering it after
+  // an upload or analysis attempt fails.
+  const readOnly = await isProjectReadOnly(userId, id);
+
   const { _count, ...rest } = project;
-  return NextResponse.json({ ...rest, documentCount: _count.documents });
+  return NextResponse.json({ ...rest, documentCount: _count.documents, readOnly });
 }
 
 export async function DELETE(

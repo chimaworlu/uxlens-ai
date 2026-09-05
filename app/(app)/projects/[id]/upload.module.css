@@ -476,3 +476,135 @@
     padding: var(--ds-spacing-xl) var(--ds-spacing-md);
   }
 }
+
+/* ---------- inline "upgrade to Pro" link ---------- */
+.linkButton {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+  color: var(--color-roles-primary);
+}
+
+/* ---------- upgrade-to-pro modal (same shape as the dashboard's,
+   app/(app)/projects/dashboard.module.css — duplicated per this app's
+   convention of keeping each page's CSS self-contained) ---------- */
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgb(0 0 0 / 0.4);
+  padding: var(--ds-spacing-lg);
+  z-index: 10;
+}
+
+.modal {
+  width: 100%;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-spacing-md);
+  background-color: var(--color-roles-surface-container-lowest);
+  border-radius: var(--ds-radius-large);
+  box-shadow: var(--effect-button-shadow-soft);
+  padding: var(--ds-spacing-xl);
+}
+
+.modalCentered {
+  position: relative;
+  align-items: center;
+  text-align: center;
+}
+
+.modalBodyText {
+  margin: 0;
+  color: var(--color-roles-on-surface-variant);
+}
+
+.modalCentered .buttonPrimary,
+.modalCentered .buttonSecondary {
+  width: 100%;
+}
+
+.buttonSecondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: var(--ds-hairline-border);
+  cursor: pointer;
+  font-weight: 400;
+  background-color: transparent;
+  color: var(--color-roles-on-surface);
+  border-radius: var(--ds-radius-medium);
+  padding: var(--ds-spacing-sm) var(--ds-spacing-lg);
+  transition: background-color 0.15s ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .buttonSecondary:hover {
+    background-color: var(--color-roles-surface-container-low);
+  }
+}
+
+.dialogIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--ds-radius-full);
+}
+
+.dialogIconPrimary {
+  background-color: var(--color-roles-primary-container);
+  color: var(--color-roles-on-primary-container);
+}
+
+.dialogCloseButton {
+  position: absolute;
+  top: var(--ds-spacing-lg);
+  right: var(--ds-spacing-lg);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--ds-radius-small);
+  padding: 0;
+  cursor: pointer;
+  color: var(--color-roles-on-surface-variant);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .dialogCloseButton:hover {
+    color: var(--color-roles-on-surface);
+  }
+}
+
+.featureList {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-spacing-sm);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  text-align: left;
+}
+
+.featureItem {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-spacing-sm);
+  color: var(--color-roles-on-surface);
+}
+
+.featureItem svg {
+  flex-shrink: 0;
+  color: var(--color-roles-primary);
+}
