@@ -4,6 +4,7 @@ import Google from "next-auth/providers/google";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "@/lib/db/prisma";
 import { verifyPassword } from "@/lib/auth/password";
+import { enqueueWelcomeEmail } from "@/lib/queue/email";
 import { authConfig } from "./auth.config";
 
 const isProduction = process.env.NODE_ENV === "production";
@@ -37,6 +38,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         path: "/",
         secure: isProduction,
       },
+    },
+  },
+  events: {
+    // Fires exactly once, right after the adapter inserts a brand-new User
+    // row — i.e. only for OAuth sign-ups (Google). The Credentials sign-up
+    // path never touches the adapter's user-creation path (it goes through
+    // app/api/auth/register, which sends its own welcome email), so this
+    // can't double-send for that flow.
+    async createUser({ user }) {
+      if (!user.email) return;
+      try {
+        await enqueueWelcomeEmail(user.email, user.name ?? "there");
+      } catch {
+        // Best-effort, same as the register route's welcome email.
+      }
     },
   },
   providers: [

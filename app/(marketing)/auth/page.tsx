@@ -433,6 +433,18 @@ function SignUpCard({
       </form>
 
       <p className={`${styles.footerText} ds-body-small`}>
+        By signing up, you agree to our{" "}
+        <Link href="/terms" className={styles.footerLink}>
+          Terms
+        </Link>{" "}
+        and{" "}
+        <Link href="/privacy" className={styles.footerLink}>
+          Privacy Policy
+        </Link>
+        .
+      </p>
+
+      <p className={`${styles.footerText} ds-body-small`}>
         Already have an account?{" "}
         <button
           type="button"
@@ -553,7 +565,8 @@ function PreSignupVerifyModal({
               Enter verification code
             </h2>
             <p className={`${styles.modalBodyText} ds-body-medium`}>
-              A confirmation code has been sent to your email address at <strong>{email}</strong>.
+              A confirmation code has been sent to your email address at <strong>{email}</strong>. The
+              code expires in 15 minutes.
             </p>
 
             <form onSubmit={handleVerify} className={styles.form}>
@@ -1147,14 +1160,45 @@ function getPasswordRequirements(value: string): { label: string; met: boolean }
   ];
 }
 
+// NEXT_PUBLIC_* so this "use client" component can read it (unlike
+// GOOGLE_CLIENT_ID/SECRET in auth.ts, which stay server-only) — a build-
+// time flag, not a secret, kept in sync by hand with whether those two
+// real credentials are actually set. FR-1: renders disabled with a dev
+// note until they are, rather than a live button that fails with a
+// confusing NextAuth "unsupported provider" error.
+const GOOGLE_SIGNIN_ENABLED = process.env.NEXT_PUBLIC_GOOGLE_SIGNIN_ENABLED === "true";
+
 function GoogleButton() {
+  const [starting, setStarting] = useState(false);
+
+  async function handleClick() {
+    setStarting(true);
+    try {
+      // No redirect: false here — unlike the Credentials provider, Google
+      // sign-in is a real full-page navigation through Google's own
+      // consent screen, not something this page waits on client-side. It
+      // lands back on /onboarding, which redirects on to /projects itself
+      // if this account already has projects (see that page) — the
+      // account may be brand new (first Google sign-in auto-creates it)
+      // or returning, and only the destination page can tell which.
+      await signIn("google", { callbackUrl: "/onboarding" });
+    } catch {
+      // Never actually resolves on success (the browser navigates away);
+      // only reachable if the redirect itself couldn't start.
+      setStarting(false);
+    }
+  }
+
   return (
     <button
       type="button"
+      onClick={handleClick}
+      disabled={!GOOGLE_SIGNIN_ENABLED || starting}
+      title={GOOGLE_SIGNIN_ENABLED ? undefined : "Google sign-in isn't configured yet"}
       className={`${styles.googleButton} ds-label-large ds-focus-ring`}
     >
       <GoogleIcon />
-      Continue with Google
+      {starting ? "Redirecting…" : "Continue with Google"}
     </button>
   );
 }

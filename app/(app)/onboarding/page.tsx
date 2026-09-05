@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type TouchEvent } from "react";
+import { useEffect, useRef, useState, type TouchEvent } from "react";
 import { useRouter } from "next/navigation";
 import styles from "./onboarding.module.css";
 
@@ -11,15 +11,46 @@ const PLAN_LIMITS: { label: string; value: string }[] = [
   { label: "Documents per project", value: "1" },
   { label: "Storage per project", value: "30 MB" },
   { label: "Analysis runs per month", value: "2" },
-  { label: "Chat messages per day", value: "30" },
+  { label: "Chat messages per day", value: "10" },
 ];
 
 export default function OnboardingPage() {
   const router = useRouter();
 
   const [step, setStep] = useState(1);
+  // FR-1: Google sign-in always lands here first (see auth/page.tsx's
+  // GoogleButton) since there's no other single place that can tell "did
+  // this account just get auto-created, or is this a returning user" —
+  // only the credentials sign-up flow already knows that up front. A
+  // returning user with at least one project has clearly been through
+  // this before, so skip straight to the dashboard instead of replaying
+  // the walkthrough. Rendering is held back (checkingReturning) until this
+  // resolves — otherwise a returning user sees a flash of "Welcome to
+  // UXLens AI, Step 1 of 3" before the redirect kicks in, which reads as
+  // "it's signing me up again" even though no new account is created.
+  const [checkingReturning, setCheckingReturning] = useState(true);
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
+
+  useEffect(() => {
+    fetch("/api/projects")
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data: { projects: unknown[] } | null) => {
+        if (data && data.projects.length > 0) {
+          router.replace("/projects");
+          return;
+        }
+        setCheckingReturning(false);
+      })
+      .catch(() => {
+        // Stay on onboarding rather than block on a failed check.
+        setCheckingReturning(false);
+      });
+  }, [router]);
+
+  if (checkingReturning) {
+    return null;
+  }
 
   function goNextStep() {
     setStep((current) => Math.min(current + 1, TOTAL_STEPS));
