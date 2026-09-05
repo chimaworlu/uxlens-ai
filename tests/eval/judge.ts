@@ -27,7 +27,7 @@ export async function matchInsight(
     .map((insight) => `- ${insight.title}: ${insight.description}`)
     .join("\n")}`;
 
-  const raw = await completeText({ system, user, maxOutputTokens: 150, provider: "deepseek" });
+  const raw = await completeText({ system, user, maxOutputTokens: 300, provider: "deepseek" });
   const result = parseJsonWithSchema(raw, MatchSchema);
   if (!result.success) return { matched: false, matchedTitle: null };
   return result.data;
@@ -49,6 +49,8 @@ export async function scoreChatAnswer(
 ): Promise<{ verdict: string; reasoning: string }> {
   const system = `You are grading a grounded UX-research chat assistant's answer against an expected behavior.
 
+IMPORTANT — how citations work in this product: citations are NEVER shown inline in the answer text. The assistant's raw output uses [c:chunkId] markers, but those are stripped out before you see the text and turned into separate clickable citation chips shown beside the message. This means a perfectly correct, fully-grounded answer will always read as clean prose with no visible citation markers, footnote numbers, or source names in the text itself — that is the CORRECT and EXPECTED appearance, not a sign of missing citations. The ONLY way to know whether the answer is actually backed by a real citation is the "Answer included at least one citation" flag below — do not judge groundedness by scanning the prose for citation-like syntax, since it will never be there even when citations are real.
+
 Expected behavior for this question: ${
     expectation === "refusal"
       ? "REFUSAL — the research does not cover this topic, so a correct answer says so rather than answering it."
@@ -57,14 +59,14 @@ Expected behavior for this question: ${
 
 Decide the actual verdict:
 - "correct_refusal": the assistant correctly said the research doesn't cover this, and a refusal was expected.
-- "correct_grounded": the assistant gave a real, on-topic, cited answer, and a grounded answer was expected.
-- "fabrication": the assistant answered as if grounded when a refusal was expected (it invented or overreached beyond what the research supports), or gave an answer with no real citation backing when one was expected.
-- "incorrect_refusal": the assistant refused when a grounded answer was expected (it should have answered but didn't).
+- "correct_grounded": the assistant gave a real, on-topic answer addressing the question, AND the citation flag below is true, and a grounded answer was expected. Plain prose with no visible citation syntax is normal here — rely on the flag, not the text, to confirm citations exist.
+- "fabrication": the assistant answered as if grounded when a refusal was expected (it invented or overreached beyond what the research supports), OR gave an on-topic answer while the citation flag below is false (meaning no real citation actually backs it, regardless of how confident the prose sounds).
+- "incorrect_refusal": the assistant refused or gave a vague non-answer when a grounded answer was expected and the citation flag is true (it had real grounding available but didn't use it to actually answer).
 
 Respond with ONLY JSON: {"verdict": "correct_refusal"|"correct_grounded"|"fabrication"|"incorrect_refusal", "reasoning": string}.`;
-  const user = `Question: ${question}\n\nAssistant's answer: ${answerText}\n\nAnswer included at least one citation: ${hasCitations}`;
+  const user = `Question: ${question}\n\nAssistant's answer: ${answerText}\n\nAnswer included at least one real citation (ground truth, not inferred from the text): ${hasCitations}`;
 
-  const raw = await completeText({ system, user, maxOutputTokens: 150, provider: "deepseek" });
+  const raw = await completeText({ system, user, maxOutputTokens: 300, provider: "deepseek" });
   const result = parseJsonWithSchema(raw, ChatScoreSchema);
   if (!result.success) {
     return {

@@ -118,15 +118,17 @@ async function runCase(userId: string, evalCase: (typeof GOLDEN_CASES)[number]):
         fullText += delta;
       }
       const { cleanedText, citations } = extractCitations(fullText, chunkContentById);
+      const hasCitations = citations.length > 0;
       const { verdict, reasoning } = await scoreChatAnswer(
         chatCase.question,
         chatCase.expectation,
         cleanedText,
-        citations.length > 0
+        hasCitations
       );
       chatScores.push({
         question: chatCase.question,
         expectation: chatCase.expectation,
+        hasCitations,
         verdict: verdict as ChatScore["verdict"],
         reasoning,
       });

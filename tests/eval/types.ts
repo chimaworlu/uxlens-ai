@@ -32,6 +32,7 @@ export type InsightScore = {
 export type ChatScore = {
   question: string;
   expectation: ChatCase["expectation"];
+  hasCitations: boolean;
   verdict: "correct_refusal" | "correct_grounded" | "fabrication" | "incorrect_refusal";
   reasoning: string;
 };
