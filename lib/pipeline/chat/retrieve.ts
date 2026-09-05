@@ -25,7 +25,7 @@ export type ChatContext = {
   usedSearch: boolean;
 };
 
-async function expandKeywords(question: string): Promise<string[]> {
+async function expandKeywords(question: string, onCost?: (usd: number) => void): Promise<string[]> {
   const system =
     'Rewrite the user\'s question into 3-5 short keyword search variants suitable for full-text search (single words or short phrases, not full sentences). Respond with ONLY JSON: {"variants": ["...", ...]}, nothing else.';
 
@@ -35,6 +35,7 @@ async function expandKeywords(question: string): Promise<string[]> {
       user: attempt === 0 ? question : `${question}\n\nYour previous response was invalid JSON. Respond with ONLY the JSON object.`,
       maxOutputTokens: 200,
       provider: "deepseek",
+      onCost,
     });
     const result = parseJsonWithSchema(raw, KeywordVariantsSchema);
     if (result.success) return result.data.variants;
@@ -91,7 +92,11 @@ async function searchChunks(projectId: string, variants: string[]): Promise<Chat
 // when usedSearch is true and chunks comes back empty — that's the "zero
 // chunks matched any keyword variant" case, not something this function
 // itself needs to special-case.
-export async function buildChatContext(projectId: string, question: string): Promise<ChatContext> {
+export async function buildChatContext(
+  projectId: string,
+  question: string,
+  onCost?: (usd: number) => void
+): Promise<ChatContext> {
   const allChunks = await prisma.documentChunk.findMany({
     where: { document: { projectId, status: "READY" } },
     select: {
@@ -118,7 +123,7 @@ export async function buildChatContext(projectId: string, question: string): Pro
     };
   }
 
-  const variants = await expandKeywords(question);
+  const variants = await expandKeywords(question, onCost);
   const chunks = await searchChunks(projectId, variants);
   return { usedSearch: true, chunks };
 }

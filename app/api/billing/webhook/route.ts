@@ -6,6 +6,7 @@ import { prisma } from "@/lib/db/prisma";
 import { activateProSubscription } from "@/lib/billing/subscription";
 import { checkRateLimit } from "@/lib/security/rate-limit";
 import { logPaymentEvent } from "@/lib/billing/payment-log";
+import { logger } from "@/lib/logger";
 
 // Gate 1 exception (api-route-creation skill): this route is one of the
 // two unauthenticated-by-design routes in the product (the other is
@@ -209,13 +210,16 @@ async function handleBillingEvent(
 ): Promise<{ userId: string | null; activated: boolean }> {
   const email = data.customer?.email;
   if (!email) {
-    console.error(`[billing/webhook] ${event} payload missing customer.email; skipping.`);
+    logger.error({ event: "billing_webhook_missing_email", paystackEvent: event }, "Webhook payload missing customer.email; skipping.");
     return { userId: null, activated: false };
   }
 
   const user = await prisma.user.findUnique({ where: { email }, select: { id: true } });
   if (!user) {
-    console.error(`[billing/webhook] ${event} for unknown user ${email}; skipping.`);
+    logger.error(
+      { event: "billing_webhook_unknown_user", paystackEvent: event, email },
+      "Webhook customer email doesn't match any known user; skipping."
+    );
     return { userId: null, activated: false };
   }
 

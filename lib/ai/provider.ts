@@ -1,6 +1,7 @@
 import OpenAI from "openai";
 import Anthropic from "@anthropic-ai/sdk";
 import { DEEPSEEK_BASE_URL, DEEPSEEK_CHAT_MODEL } from "./config.ts";
+import { computeCostUsd } from "./cost.ts";
 
 // .agent/rules/security.md: every provider key is server-only, loaded from
 // env vars, never reachable from client code. This module is the one place
@@ -51,6 +52,14 @@ export type CompletionParams = {
   user: string;
   maxOutputTokens: number;
   provider: AiProvider;
+  // R-3's AI spend ceiling needs a running total across every call in a
+  // pipeline run or chat turn (Pass A alone makes several). An optional
+  // callback rather than changing this function's return type keeps every
+  // existing caller that doesn't care about cost unchanged — callers that
+  // do (run.ts, the chat route) pass a shared accumulator down through
+  // their pass/retrieval functions instead of each one having to thread a
+  // cost value through its own return type.
+  onCost?: (usd: number) => void;
 };
 
 export async function completeText(params: CompletionParams): Promise<string> {
@@ -62,6 +71,7 @@ export async function completeText(params: CompletionParams): Promise<string> {
       system: params.system,
       messages: [{ role: "user", content: params.user }],
     });
+    params.onCost?.(computeCostUsd("claude", response.usage.input_tokens, response.usage.output_tokens));
     const block = response.content.find((entry) => entry.type === "text");
     if (!block || block.type !== "text") {
       throw new ProviderError("Claude returned no text content.");
@@ -78,6 +88,9 @@ export async function completeText(params: CompletionParams): Promise<string> {
       { role: "user", content: params.user },
     ],
   });
+  params.onCost?.(
+    computeCostUsd("deepseek", response.usage?.prompt_tokens ?? 0, response.usage?.completion_tokens ?? 0)
+  );
   const content = response.choices[0]?.message?.content;
   if (!content) throw new ProviderError("DeepSeek returned no content.");
   return content;
@@ -95,6 +108,9 @@ export type StreamParams = {
   messages: ChatTurn[];
   maxOutputTokens: number;
   provider: AiProvider;
+  // Same accumulator pattern as CompletionParams.onCost — called once,
+  // after the stream is fully drained, once final usage is known.
+  onCost?: (usd: number) => void;
 };
 
 export async function* streamText(params: StreamParams): AsyncGenerator<string> {
@@ -111,6 +127,10 @@ export async function* streamText(params: StreamParams): AsyncGenerator<string> 
         yield event.delta.text;
       }
     }
+    // Resolves once the stream above has fully ended (it's the same
+    // underlying stream), with the complete message's final usage totals.
+    const final = await stream.finalMessage();
+    params.onCost?.(computeCostUsd("claude", final.usage.input_tokens, final.usage.output_tokens));
     return;
   }
 
@@ -119,6 +139,10 @@ export async function* streamText(params: StreamParams): AsyncGenerator<string> 
     model: DEEPSEEK_CHAT_MODEL,
     max_tokens: params.maxOutputTokens,
     stream: true,
+    // Without this, streamed chunks never carry a `usage` field at all —
+    // OpenAI-compatible APIs only attach it to one final, content-less
+    // chunk when explicitly asked for via stream_options.
+    stream_options: { include_usage: true },
     messages: [
       { role: "system", content: params.system },
       ...params.messages.map((turn) => ({ role: turn.role, content: turn.content }) as const),
@@ -127,5 +151,8 @@ export async function* streamText(params: StreamParams): AsyncGenerator<string> 
   for await (const chunk of stream) {
     const delta = chunk.choices[0]?.delta?.content;
     if (delta) yield delta;
+    if (chunk.usage) {
+      params.onCost?.(computeCostUsd("deepseek", chunk.usage.prompt_tokens, chunk.usage.completion_tokens));
+    }
   }
 }

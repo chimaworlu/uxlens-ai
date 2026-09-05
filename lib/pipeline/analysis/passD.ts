@@ -8,7 +8,10 @@ const SYSTEM_PROMPT = `Write a short executive summary (2-3 sentences, plain pro
 
 // PRD Section 6, step 10: summary generated from the verified insight set
 // only, so it can never reference content Pass C dropped.
-export async function runPassD(insights: VerifiedInsight[]): Promise<string> {
+export async function runPassD(
+  insights: VerifiedInsight[],
+  onCost?: (usd: number) => void
+): Promise<string> {
   const provider = synthesisProvider();
   const user = insights.map((insight) => `[${insight.type}] ${insight.title}: ${insight.description}`).join("\n");
 
@@ -17,6 +20,7 @@ export async function runPassD(insights: VerifiedInsight[]): Promise<string> {
     user,
     maxOutputTokens: MAX_OUTPUT_TOKENS,
     provider,
+    onCost,
   });
   return stripEmDash(summary.trim());
 }

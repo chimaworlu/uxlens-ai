@@ -1,4 +1,5 @@
 import { prisma } from "../../db/prisma.ts";
+import { logger } from "../../logger.ts";
 import { locateQuote } from "../citation-match.ts";
 import type { ClusteredInsight } from "./schemas.ts";
 
@@ -44,13 +45,14 @@ export async function runPassC(
     // unverifiable citations pruned.
     if (verifiedCitations.length === 0) {
       droppedCount++;
-      console.warn(
-        JSON.stringify({
+      logger.warn(
+        {
           event: "citation_drop",
           insightTitle: insight.title,
           insightType: insight.type,
           reason: "no citation verified against source text",
-        })
+        },
+        "Insight dropped: no citation verified against source text."
       );
       continue;
     }

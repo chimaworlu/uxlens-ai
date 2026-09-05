@@ -6,6 +6,7 @@ import { initiateCheckout, PaystackError } from "@/lib/billing/paystack";
 import { SITE_URL } from "@/lib/seo";
 import { checkRateLimit } from "@/lib/security/rate-limit";
 import { logPaymentEvent } from "@/lib/billing/payment-log";
+import { logger } from "@/lib/logger";
 
 // FR-33: the only paid tier, NGN only. Server config, never a client-
 // supplied amount — money-and-billing.md: "No amount computed client-side;
@@ -45,7 +46,7 @@ export async function POST() {
   if (!proPlanCode) {
     // Config error, not a user error — logged with full detail, user gets
     // a safe generic message (coding-standard.md).
-    console.error("[billing/checkout] PAYSTACK_PRO_PLAN_CODE is not configured.");
+    logger.error({ event: "billing_checkout_misconfigured" }, "PAYSTACK_PRO_PLAN_CODE is not configured.");
     return NextResponse.json({ error: "Billing isn't available right now." }, { status: 500 });
   }
 
@@ -85,7 +86,10 @@ export async function POST() {
     return NextResponse.json({ link: authorization_url });
   } catch (error) {
     if (error instanceof PaystackError) {
-      console.error("[billing/checkout] Paystack error:", error.message);
+      logger.error(
+        { event: "billing_checkout_paystack_error", userId, reference, err: error.message },
+        "Paystack checkout initiation failed."
+      );
       await logPaymentEvent({
         userId,
         source: "checkout",

@@ -51,6 +51,7 @@ export type RespondParams = {
   context: ChatContext;
   history: ChatTurn[];
   executiveSummary: string | null;
+  onCost?: (usd: number) => void;
 };
 
 export function streamAnswer(params: RespondParams): AsyncGenerator<string> {
@@ -67,5 +68,6 @@ export function streamAnswer(params: RespondParams): AsyncGenerator<string> {
     messages,
     maxOutputTokens: MAX_OUTPUT_TOKENS,
     provider: synthesisProvider(),
+    onCost: params.onCost,
   });
 }

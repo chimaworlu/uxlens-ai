@@ -7,6 +7,7 @@ import { verifyTransaction, PaystackError } from "@/lib/billing/paystack";
 import { activateProSubscription } from "@/lib/billing/subscription";
 import { checkRateLimit } from "@/lib/security/rate-limit";
 import { logPaymentEvent } from "@/lib/billing/payment-log";
+import { logger } from "@/lib/logger";
 
 // Not in the PRD Section 7 route table (which only names checkout,
 // webhook, and portal) — added because relying on the webhook alone means
@@ -103,8 +104,9 @@ export async function POST(request: Request) {
   // transaction's own customer email against the session's, so a user
   // can't activate Pro by feeding in someone else's payment reference.
   if (transaction.customer.email.toLowerCase() !== user.email.toLowerCase()) {
-    console.error(
-      `[billing/verify] reference ${reference} belongs to a different customer than session user ${userId}; refusing to activate.`
+    logger.warn(
+      { event: "billing_verify_customer_mismatch", reference, userId },
+      "Payment reference belongs to a different customer than the session user; refusing to activate."
     );
     await logPaymentEvent({
       userId,

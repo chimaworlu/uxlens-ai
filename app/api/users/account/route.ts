@@ -5,6 +5,7 @@ import { getSessionUserId } from "@/lib/auth/session";
 import { enqueueR2Cleanup } from "@/lib/queue/cleanup";
 import { findActiveSubscription, disableSubscription, PaystackError } from "@/lib/billing/paystack";
 import { checkRateLimit } from "@/lib/security/rate-limit";
+import { logger } from "@/lib/logger";
 
 // FR-38: account deletion. Typed-confirmation pattern matching project
 // deletion (FR-5) — the client shows the same warning text either way, but
@@ -60,15 +61,19 @@ export async function DELETE(request: Request) {
           // being up. Logged for manual follow-up (a subscription left
           // active against a since-deleted account is a real cost leak,
           // just not one worth failing this request over).
-          console.error(
-            `[users/account] Failed to cancel Paystack subscription for deleted user ${userId}: ${error.message}`
+          logger.error(
+            { event: "account_deletion_paystack_cancel_failed", userId, err: error.message },
+            "Failed to cancel Paystack subscription for a deleted account."
           );
         } else {
           throw error;
         }
       }
     } else {
-      console.error("[users/account] PAYSTACK_PRO_PLAN_CODE is not configured; skipping Paystack cancel.");
+      logger.error(
+        { event: "account_deletion_billing_misconfigured", userId },
+        "PAYSTACK_PRO_PLAN_CODE is not configured; skipping Paystack cancel during account deletion."
+      );
     }
   }
 

@@ -43,7 +43,7 @@ function formatBatch(batch: ChunkInput[]): string {
   return batch.map((chunk) => `[chunkId: ${chunk.id}]\n${chunk.content}`).join("\n\n---\n\n");
 }
 
-async function runBatch(batch: ChunkInput[]): Promise<Observation[]> {
+async function runBatch(batch: ChunkInput[], onCost?: (usd: number) => void): Promise<Observation[]> {
   const validIds = new Set(batch.map((chunk) => chunk.id));
   const user = formatBatch(batch);
 
@@ -52,6 +52,7 @@ async function runBatch(batch: ChunkInput[]): Promise<Observation[]> {
     user,
     maxOutputTokens: MAX_OUTPUT_TOKENS,
     provider: "deepseek",
+    onCost,
   });
   const attempt = parseJsonWithSchema(raw, ObservationArraySchema);
   if (attempt.success) return attempt.data.filter((o) => validIds.has(o.chunkId));
@@ -64,6 +65,7 @@ async function runBatch(batch: ChunkInput[]): Promise<Observation[]> {
     user: retryUser,
     maxOutputTokens: MAX_OUTPUT_TOKENS,
     provider: "deepseek",
+    onCost,
   });
   const retryAttempt = parseJsonWithSchema(retryRaw, ObservationArraySchema);
   if (!retryAttempt.success) {
@@ -72,14 +74,20 @@ async function runBatch(batch: ChunkInput[]): Promise<Observation[]> {
   return retryAttempt.data.filter((o) => validIds.has(o.chunkId));
 }
 
-export async function runPassA(chunks: ChunkInput[]): Promise<Observation[]> {
+export async function runPassA(
+  chunks: ChunkInput[],
+  onCost?: (usd: number) => void
+): Promise<Observation[]> {
   const batches = batchChunks(chunks);
   const results: Observation[] = [];
 
-  // Parallelized 4 batches at a time, per PRD Section 6 step 7.
+  // Parallelized 4 batches at a time, per PRD Section 6 step 7. Safe for
+  // the shared onCost callback to be invoked concurrently here: it's a
+  // synchronous `total += usd` in every caller, and JS callbacks never
+  // interleave mid-execution.
   for (let i = 0; i < batches.length; i += PARALLEL_BATCHES) {
     const group = batches.slice(i, i + PARALLEL_BATCHES);
-    const groupResults = await Promise.all(group.map(runBatch));
+    const groupResults = await Promise.all(group.map((batch) => runBatch(batch, onCost)));
     for (const observations of groupResults) results.push(...observations);
   }
 

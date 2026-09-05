@@ -29,11 +29,20 @@ function parseClustered(raw: string) {
   return parseJsonWithSchema(raw, ClusteredInsightsSchema);
 }
 
-export async function runPassB(observations: Observation[]): Promise<ClusteredInsight[]> {
+export async function runPassB(
+  observations: Observation[],
+  onCost?: (usd: number) => void
+): Promise<ClusteredInsight[]> {
   const provider = synthesisProvider();
   const user = JSON.stringify(observations);
 
-  const first = await completeText({ system: SYSTEM_PROMPT, user, maxOutputTokens: MAX_OUTPUT_TOKENS, provider });
+  const first = await completeText({
+    system: SYSTEM_PROMPT,
+    user,
+    maxOutputTokens: MAX_OUTPUT_TOKENS,
+    provider,
+    onCost,
+  });
   const firstAttempt = parseClustered(first);
   if (firstAttempt.success) return firstAttempt.data.insights.map(sanitizeInsight);
 
@@ -45,6 +54,7 @@ export async function runPassB(observations: Observation[]): Promise<ClusteredIn
     user: retryUser,
     maxOutputTokens: MAX_OUTPUT_TOKENS,
     provider,
+    onCost,
   });
   const retryAttempt = parseClustered(retry);
   if (!retryAttempt.success) {

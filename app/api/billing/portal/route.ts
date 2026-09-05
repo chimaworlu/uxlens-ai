@@ -4,6 +4,7 @@ import { getSessionUserId } from "@/lib/auth/session";
 import { getProjectUsage, getAnalysisUsage, getChatUsage, getStorageUsage } from "@/lib/quota/checks";
 import { findActiveSubscription, disableSubscription, PaystackError } from "@/lib/billing/paystack";
 import { checkRateLimit } from "@/lib/security/rate-limit";
+import { logger } from "@/lib/logger";
 
 // PRD Section 7 lists only GET /api/billing/portal ("plan + usage
 // summary"), no dedicated cancel route. FR-35 still needs a self-serve
@@ -71,7 +72,7 @@ export async function POST() {
 
   const proPlanCode = process.env.PAYSTACK_PRO_PLAN_CODE;
   if (!proPlanCode) {
-    console.error("[billing/portal] PAYSTACK_PRO_PLAN_CODE is not configured.");
+    logger.error({ event: "billing_portal_misconfigured" }, "PAYSTACK_PRO_PLAN_CODE is not configured.");
     return NextResponse.json({ error: "Billing isn't available right now." }, { status: 500 });
   }
 
@@ -83,11 +84,17 @@ export async function POST() {
       // Nothing active on Paystack's side to stop (e.g. it already lapsed
       // on its own) — still record the user's cancel intent below rather
       // than blocking on a state mismatch we can't resolve here.
-      console.error(`[billing/portal] No active Paystack subscription found for ${user.email}; cancelling locally only.`);
+      logger.warn(
+        { event: "billing_portal_no_active_subscription", userId },
+        "No active Paystack subscription found; cancelling locally only."
+      );
     }
   } catch (error) {
     if (error instanceof PaystackError) {
-      console.error("[billing/portal] Paystack cancel error:", error.message);
+      logger.error(
+        { event: "billing_portal_paystack_cancel_error", userId, err: error.message },
+        "Paystack subscription cancel failed."
+      );
       return NextResponse.json(
         { error: "Couldn't cancel your subscription. Please try again." },
         { status: 502 }

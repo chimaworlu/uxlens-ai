@@ -1,4 +1,5 @@
 import { locateQuote } from "../citation-match.ts";
+import { logger } from "../../logger.ts";
 
 // PRD Section 6, Stage 5, step 14: the model cites chunks inline as
 // [c:chunkId] — a chunk-level reference, not a verbatim quote the way Pass
@@ -94,7 +95,7 @@ export function extractCitations(rawText: string, chunkContentById: Map<string, 
   cleanedText += rawText.slice(cursor);
 
   if (dropped.length > 0) {
-    console.warn(JSON.stringify({ event: "chat_citation_drop", chunkIds: dropped }));
+    logger.warn({ event: "chat_citation_drop", chunkIds: dropped }, "Chat citation(s) dropped: not verified against source text.");
   }
 
   return { cleanedText: cleanedText.replace(/[ \t]+/g, " ").trim(), citations };

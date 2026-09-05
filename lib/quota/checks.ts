@@ -8,8 +8,9 @@
 //   - FR-20 version history cap (1 free / 5 pro)
 //   - FR-21 monthly analysis run cap (2 free / 30 pro)
 //   - FR-22 / FR-22b analysis input word/token floor and ceiling
-//   - FR-31 daily chat message cap (30 free / 500 pro)
+//   - FR-31 daily chat message cap (10 free / 500 pro)
 //   - FR-42 storage cap (30 MB free / 500 MB pro)
+//   - R-3   per-user daily AI spend ceiling ($2/day, all plans)
 
 // Relative import with an explicit .ts extension, not the "@/" alias —
 // this file is reachable from worker/index.ts (via pruneAnalysisVersions,
@@ -119,12 +120,18 @@ export async function checkDocumentQuota(
 }
 
 // FR-21: 2 analysis runs per calendar month across all of a user's
-// projects on Free, 30/month on Pro. Resets on the 1st of each month —
+// projects on Free, 15/month on Pro. Resets on the 1st of each month —
 // not a permanent lockout, and nothing else in the product is blocked
 // while this quota is maxed out. Counted from UsageRecord rows for the
 // current month rather than a separate counter table (see that model's
 // own note in prisma/schema.prisma for why).
-export const ANALYSIS_LIMITS: Record<PlanTier, number> = { FREE: 2, PRO: 30 };
+// Lowered from the PRD's original 30/month: each analysis run is the
+// expensive multi-pass AI operation, and it's the single biggest driver of
+// per-user AI cost — the PRD's own unit economics flagged worst-case Pro
+// cost at ~230% of the ₦3,000/month price, driven mostly by this number.
+// 15/month still comfortably covers the PRD's median-usage estimate
+// (8/month) while roughly halving the worst-case cost tail.
+export const ANALYSIS_LIMITS: Record<PlanTier, number> = { FREE: 2, PRO: 15 };
 
 export async function getAnalysisUsage(userId: string): Promise<UsageSummary> {
   const user = await prisma.user.findUniqueOrThrow({
@@ -159,10 +166,16 @@ export async function checkAnalysisQuota(userId: string): Promise<void> {
 // of drifting until the next cleanup pass.
 export const VERSION_LIMITS: Record<PlanTier, number> = { FREE: 1, PRO: 5 };
 
-// FR-31: 30 chat messages/day per user on Free, 500/day on Pro. A daily
+// FR-31: 10 chat messages/day per user on Free, 500/day on Pro. A daily
 // (UTC calendar day) boundary, not the monthly one checkAnalysisQuota uses
 // — same UsageRecord-counting idiom, just a narrower window.
-export const CHAT_MESSAGE_LIMITS: Record<PlanTier, number> = { FREE: 30, PRO: 500 };
+// Lowered from the PRD's original 30/day: unlike every other cap, free-tier
+// chat has zero revenue offsetting its AI cost (a Pro user's overage is at
+// least funded by their ₦3,000/month; a free user's is not), so it's the
+// least-protected cost surface in the product. 10/day still lets someone
+// genuinely try the product and still trips the existing "upgrade to Pro"
+// prompt, while cutting worst-case free-tier chat cost by two-thirds.
+export const CHAT_MESSAGE_LIMITS: Record<PlanTier, number> = { FREE: 10, PRO: 500 };
 
 export async function getChatUsage(userId: string): Promise<UsageSummary> {
   const user = await prisma.user.findUniqueOrThrow({
@@ -216,6 +229,86 @@ export async function getStorageUsage(
     limitBytesPerProject: STORAGE_LIMIT_BYTES[user.plan],
     projectCount,
   };
+}
+
+// FR-36: after a Pro -> Free downgrade, every project survives intact
+// (nothing is ever deleted) but only the plan's allowed number of active
+// projects stays writable — the rest become read-only (viewable, chat
+// still works within FR-31's own cap; upload and analysis disabled) until
+// the user upgrades or frees a slot by archiving/deleting another active
+// project. "Writable" is always the plan's cap worth of oldest active
+// projects — stable and order-independent, rather than whichever project
+// the user happens to have open.
+// Shared by isProjectReadOnly (one project) and the project list route
+// (all of a user's projects at once, without an N+1 query per row).
+export async function getWritableProjectIds(userId: string): Promise<Set<string>> {
+  const user = await prisma.user.findUniqueOrThrow({
+    where: { id: userId },
+    select: { plan: true },
+  });
+
+  const writableProjects = await prisma.project.findMany({
+    where: { userId, archivedAt: null },
+    orderBy: { createdAt: "asc" },
+    take: PROJECT_LIMITS[user.plan],
+    select: { id: true },
+  });
+
+  return new Set(writableProjects.map((project) => project.id));
+}
+
+export async function isProjectReadOnly(userId: string, projectId: string): Promise<boolean> {
+  const writableIds = await getWritableProjectIds(userId);
+  return !writableIds.has(projectId);
+}
+
+export async function checkProjectWritable(userId: string, projectId: string): Promise<void> {
+  if (await isProjectReadOnly(userId, projectId)) {
+    throw new QuotaExceededError(
+      "This project is read-only because it's over your plan's active project limit. Upgrade to Pro, or archive or delete another active project to free up a slot.",
+      "read-only"
+    );
+  }
+}
+
+// R-3: a per-user, per-day cap on total AI cost, on top of (not instead
+// of) the analysis-run and chat-message quotas above. Those quotas cap how
+// many times a feature runs; this caps how much an unusual case can cost
+// even while still within quota — e.g. a Free-tier user's monthly analysis
+// count isn't maxed out, but their documents are large enough that each of
+// those few runs costs several times the typical amount. Applies to every
+// plan, including Pro, since the PRD's own unit economics show even
+// median-usage Pro cost is already thin against its ₦3,000/month price.
+// Logged as its own UsageRecord kind ("ai_cost") specifically so it's
+// invisible to the count-based quota queries above, which filter by kind
+// and would otherwise be thrown off by extra rows.
+export const AI_SPEND_CEILING_USD = 2;
+
+export async function logAiCost(userId: string, costUsd: number): Promise<void> {
+  if (costUsd <= 0) return;
+  await prisma.usageRecord.create({ data: { userId, kind: "ai_cost", costUsd } });
+}
+
+export async function getAiSpendToday(userId: string): Promise<number> {
+  const now = new Date();
+  const startOfDay = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+
+  const result = await prisma.usageRecord.aggregate({
+    where: { userId, kind: "ai_cost", createdAt: { gte: startOfDay } },
+    _sum: { costUsd: true },
+  });
+
+  return Number(result._sum.costUsd ?? 0);
+}
+
+export async function checkAiSpendCeiling(userId: string): Promise<void> {
+  const spentToday = await getAiSpendToday(userId);
+  if (spentToday >= AI_SPEND_CEILING_USD) {
+    throw new QuotaExceededError(
+      "You've reached today's usage limit for AI features. Please try again tomorrow.",
+      "ai-spend"
+    );
+  }
 }
 
 export async function pruneAnalysisVersions(projectId: string): Promise<void> {
