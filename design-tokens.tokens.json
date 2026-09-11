@@ -2304,11 +2304,11 @@
         },
         "fontFamily": {
           "type": "string",
-          "value": "DM Sans"
+          "value": "Fraunces"
         },
         "fontWeight": {
           "type": "number",
-          "value": 500
+          "value": 400
         },
         "fontStyle": {
           "type": "string",
@@ -2350,11 +2350,11 @@
         },
         "fontFamily": {
           "type": "string",
-          "value": "DM Sans"
+          "value": "Fraunces"
         },
         "fontWeight": {
           "type": "number",
-          "value": 500
+          "value": 400
         },
         "fontStyle": {
           "type": "string",
@@ -2396,11 +2396,11 @@
         },
         "fontFamily": {
           "type": "string",
-          "value": "DM Sans"
+          "value": "Fraunces"
         },
         "fontWeight": {
           "type": "number",
-          "value": 500
+          "value": 400
         },
         "fontStyle": {
           "type": "string",
@@ -2416,7 +2416,7 @@
         },
         "lineHeight": {
           "type": "dimension",
-          "value": 60
+          "value": 48
         },
         "paragraphIndent": {
           "type": "dimension",
@@ -2444,11 +2444,11 @@
         },
         "fontFamily": {
           "type": "string",
-          "value": "DM Sans"
+          "value": "Fraunces"
         },
         "fontWeight": {
           "type": "number",
-          "value": 500
+          "value": 400
         },
         "fontStyle": {
           "type": "string",
@@ -2490,11 +2490,11 @@
         },
         "fontFamily": {
           "type": "string",
-          "value": "DM Sans"
+          "value": "Fraunces"
         },
         "fontWeight": {
           "type": "number",
-          "value": 500
+          "value": 400
         },
         "fontStyle": {
           "type": "string",
@@ -2536,11 +2536,11 @@
         },
         "fontFamily": {
           "type": "string",
-          "value": "DM Sans"
+          "value": "Fraunces"
         },
         "fontWeight": {
           "type": "number",
-          "value": 500
+          "value": 400
         },
         "fontStyle": {
           "type": "string",
@@ -2584,11 +2584,11 @@
         },
         "fontFamily": {
           "type": "string",
-          "value": "DM Sans"
+          "value": "Fraunces"
         },
         "fontWeight": {
           "type": "number",
-          "value": 500
+          "value": 400
         },
         "fontStyle": {
           "type": "string",
@@ -2630,11 +2630,11 @@
         },
         "fontFamily": {
           "type": "string",
-          "value": "DM Sans"
+          "value": "Fraunces"
         },
         "fontWeight": {
           "type": "number",
-          "value": 600
+          "value": 400
         },
         "fontStyle": {
           "type": "string",
@@ -2676,11 +2676,11 @@
         },
         "fontFamily": {
           "type": "string",
-          "value": "DM Sans"
+          "value": "Fraunces"
         },
         "fontWeight": {
           "type": "number",
-          "value": 500
+          "value": 400
         },
         "fontStyle": {
           "type": "string",
@@ -2724,11 +2724,11 @@
         },
         "fontFamily": {
           "type": "string",
-          "value": "DM Sans"
+          "value": "Inter"
         },
         "fontWeight": {
           "type": "number",
-          "value": 500
+          "value": 400
         },
         "fontStyle": {
           "type": "string",
@@ -2770,11 +2770,11 @@
         },
         "fontFamily": {
           "type": "string",
-          "value": "DM Sans"
+          "value": "Inter"
         },
         "fontWeight": {
           "type": "number",
-          "value": 500
+          "value": 400
         },
         "fontStyle": {
           "type": "string",
@@ -2816,11 +2816,11 @@
         },
         "fontFamily": {
           "type": "string",
-          "value": "DM Sans"
+          "value": "Inter"
         },
         "fontWeight": {
           "type": "number",
-          "value": 500
+          "value": 400
         },
         "fontStyle": {
           "type": "string",
@@ -2864,7 +2864,7 @@
         },
         "fontFamily": {
           "type": "string",
-          "value": "DM Sans"
+          "value": "Inter"
         },
         "fontWeight": {
           "type": "number",
@@ -2910,11 +2910,11 @@
         },
         "fontFamily": {
           "type": "string",
-          "value": "DM Sans"
+          "value": "Inter"
         },
         "fontWeight": {
           "type": "number",
-          "value": 500
+          "value": 400
         },
         "fontStyle": {
           "type": "string",
@@ -2956,11 +2956,11 @@
         },
         "fontFamily": {
           "type": "string",
-          "value": "DM Sans"
+          "value": "Inter"
         },
         "fontWeight": {
           "type": "number",
-          "value": 500
+          "value": 400
         },
         "fontStyle": {
           "type": "string",

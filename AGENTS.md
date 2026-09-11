@@ -31,9 +31,9 @@ These choices are already made. You do not evaluate alternatives, propose swaps,
 - Cloudflare R2 as the only file store. Never store uploaded files on local disk or in Postgres.
 
 **Services**
-- Flutterwave is the only payment provider. NGN is the only currency. Do not add Stripe, Paystack, or any USD price — that is explicitly out of scope (NG-7) until Phase 3, and only then if a documented trigger in the PRD is hit.
+- Paystack is the only payment provider. NGN is the only currency. Do not add Stripe, Flutterwave, or any USD price — that is explicitly out of scope (NG-7) until Phase 3, and only then if a documented trigger in the PRD is hit. (Changed from Flutterwave to Paystack by explicit founder decision; see `Docs/prd-uxlens-ai.md` for the FR-33/34 wording this update reflects.)
 - Auth.js (NextAuth v5) with the Prisma adapter is the only auth system. Do not hand-roll session handling.
-- Resend is the only transactional email provider.
+- Nodemailer (Gmail SMTP) is the only transactional email provider.
 - Sentry for error tracking, pino for structured logs. Do not add a second logging library.
 
 **AI providers**
@@ -63,7 +63,7 @@ Every rule below is a hard boundary. **Breaking any rule on this list means the 
 
 3. **Never call an insight, theme, pain point, or chat answer "from the research" unless it is.** The general-knowledge/research-grounded distinction is not cosmetic. Do not merge the two code paths to simplify rendering.
 
-4. **Never let analysis or chat bypass a quota, cap, or size limit, for any user, under any condition — including your own test accounts.** This includes: free tier's 3 projects / 3 analyses per month / 10 documents per project / 100 MB storage / 30 chat messages per day / 1 kept analysis version; Pro's corresponding higher limits (50 projects / 30 analyses per month / 25 documents / 2 GB / 500 chat messages per day / 5 kept analysis versions); the 300-word minimum and 300k-token maximum on analysis input; and the file size and document count caps on upload. Every one of these is enforced **server-side**, before the expensive work is queued — never trust a client-side check alone, and never skip the check because "it's obviously under the limit." *(FR-7, FR-9, FR-20, FR-21, FR-22, FR-22b, FR-31, FR-42)*
+4. **Never let analysis or chat bypass a quota, cap, or size limit, for any user, under any condition — including your own test accounts.** This includes: free tier's 1 project / 2 analyses per month / 1 document per project / 30 MB storage per project / 30 chat messages per day / 1 kept analysis version; Pro's corresponding higher limits (15 projects / 30 analyses per month / 20 documents per project / 500 MB per project / 500 chat messages per day / 5 kept analysis versions); the 300-word minimum and 300k-token maximum on analysis input; and the file size and document count caps on upload. Every one of these is enforced **server-side**, before the expensive work is queued — never trust a client-side check alone, and never skip the check because "it's obviously under the limit." *(FR-7, FR-9, FR-20, FR-21, FR-22, FR-22b, FR-31, FR-42)*
 
 5. **Never proxy uploaded file bytes through the application server.** Uploads go directly from the browser to Cloudflare R2 via a presigned URL the server generates. If you find yourself writing code that reads a file into the Next.js server and re-uploads it, stop — that is the wrong pattern.
 
@@ -77,7 +77,7 @@ Every rule below is a hard boundary. **Breaking any rule on this list means the 
 
 10. **Never charge, price, or display an amount in any currency other than NGN.** No USD price anywhere in the product, even as a secondary display, at MVP. *(NG-7)*
 
-11. **Never let a webhook be processed twice.** The Flutterwave webhook handler is idempotent by transaction reference — verify the signature, then check whether that `txRef` has already been processed before acting on it. *(FR-34)*
+11. **Never let a webhook be processed twice.** The Paystack webhook handler is idempotent by transaction reference — verify the signature, then check whether that `txRef` has already been processed before acting on it. *(FR-34)*
 
 12. **Never let a `PAST_DUE` subscription stay Pro forever.** The grace period (5 days) must actually end via the daily billing-enforcement job. If you build the grace period without also building the job that terminates it, you have built half a feature that behaves like a bug.
 
@@ -143,9 +143,9 @@ Every rule below is a hard boundary. **Breaking any rule on this list means the 
     passA.ts / passB.ts / passC.ts / passD.ts   # Stage 4
     retrieval.ts               # Stage 5: size check → full-context or FTS+keyword-expansion
   /billing
-    flutterwave.ts
+    paystack.ts
   /email
-    resend.ts
+    nodemailer.ts
   /storage
     r2.ts                      # presign, object key builder
   /db

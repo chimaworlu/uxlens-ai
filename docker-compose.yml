@@ -7,7 +7,10 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: uxlens_ai
     ports:
-      - "5432:5432"
+      # Host port 5432 is already taken by an unrelated project's Postgres
+      # container on this machine — mapped to 5433 on the host instead to
+      # avoid touching that container. DATABASE_URL below matches.
+      - "5433:5432"
     volumes:
       - uxlens_postgres_data:/var/lib/postgresql/data
 

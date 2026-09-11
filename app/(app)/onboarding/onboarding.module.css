@@ -1,0 +1,239 @@
+.page {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--color-roles-surface-container-low);
+}
+
+.nav {
+  padding: var(--ds-spacing-base) var(--ds-spacing-xxl);
+  background-color: var(--color-roles-surface);
+}
+
+.brand {
+  color: var(--color-roles-primary);
+}
+
+.main {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--ds-spacing-xxl);
+}
+
+@media (max-width: 720px) {
+  .nav {
+    padding: var(--ds-spacing-base) var(--ds-spacing-lg);
+  }
+
+  .main {
+    align-items: center;
+    padding: var(--ds-spacing-lg);
+  }
+
+  .card {
+    max-width: 100%;
+    margin: auto 0;
+    padding: var(--ds-spacing-lg);
+  }
+
+  .actions {
+    flex-direction: column;
+  }
+
+  .stepSkipButton {
+    align-self: flex-end;
+  }
+
+  .buttonLink {
+    align-self: center;
+  }
+
+  .buttonPrimary {
+    width: 100%;
+  }
+}
+
+@media (max-width: 420px) {
+  .main {
+    padding: var(--ds-spacing-md);
+  }
+
+  .card {
+    padding: var(--ds-spacing-md);
+    gap: var(--ds-spacing-md);
+  }
+
+  .planRow {
+    gap: var(--ds-spacing-md);
+  }
+}
+
+@media (max-height: 760px) {
+  .main {
+    align-items: center;
+    padding-top: var(--ds-spacing-lg);
+    padding-bottom: var(--ds-spacing-lg);
+  }
+}
+
+@media (max-width: 720px) {
+  .card {
+    touch-action: pan-y;
+  }
+}
+
+.card {
+  width: 100%;
+  max-width: 440px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--ds-spacing-lg);
+  background-color: var(--color-roles-surface-container-lowest);
+  border-radius: var(--ds-radius-large);
+  box-shadow: var(--effect-button-shadow-soft);
+  padding: var(--ds-spacing-xxl);
+  text-align: center;
+}
+
+.dots {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-spacing-xs);
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--ds-radius-full);
+  background-color: var(--color-roles-surface-variant);
+}
+
+.dotActive {
+  background-color: var(--color-roles-primary);
+}
+
+.dot[aria-hidden="true"] {
+  /* Decorative only; the text step count carries the meaning. */
+}
+
+.stepLabel {
+  color: var(--color-roles-on-surface-variant);
+  margin-top: calc(-1 * var(--ds-spacing-sm));
+}
+
+.iconBadge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--ds-radius-full);
+  background-color: var(--color-roles-secondary-container);
+  color: var(--color-roles-on-secondary-container);
+}
+
+.heading {
+  color: var(--color-roles-on-surface);
+}
+
+.body {
+  color: var(--color-roles-on-surface-variant);
+}
+
+.planTable {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-spacing-sm);
+  text-align: left;
+}
+
+.planRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--color-roles-on-surface);
+}
+
+.planRow span:last-child {
+  font-weight: 500;
+}
+
+.actions {
+  width: 100%;
+  display: flex;
+  gap: var(--ds-spacing-sm);
+  flex-direction: column;
+}
+
+.buttonSecondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  border: 1px solid var(--color-roles-surface-variant);
+  cursor: pointer;
+  font-weight: 400;
+  background-color: transparent;
+  color: var(--color-roles-on-surface);
+  border-radius: var(--ds-radius-medium);
+  padding: var(--ds-spacing-sm) var(--ds-spacing-lg);
+  transition: filter 0.15s ease;
+}
+
+.stepSkipButton {
+  position: absolute;
+  top: var(--ds-spacing-lg);
+  right: var(--ds-spacing-lg);
+  border: 1px solid var(--color-roles-surface-variant);
+  background-color: var(--color-roles-surface-container-lowest);
+  color: var(--color-roles-on-surface);
+  border-radius: var(--ds-radius-medium);
+  padding: var(--ds-spacing-xs) var(--ds-spacing-md);
+  cursor: pointer;
+}
+
+.buttonLink {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: var(--color-roles-primary);
+  text-decoration: underline;
+  width: fit-content;
+  align-self: center;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .buttonSecondary:hover {
+    filter: brightness(0.96);
+  }
+
+  .buttonLink:hover {
+    text-decoration-thickness: 2px;
+  }
+}
+
+.buttonPrimary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  border: 1px solid transparent;
+  cursor: pointer;
+  font-weight: 400;
+  background-color: var(--color-roles-primary);
+  color: var(--color-roles-on-primary);
+  border-radius: var(--ds-radius-medium);
+  padding: var(--ds-spacing-sm) var(--ds-spacing-lg);
+  transition: filter 0.15s ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .buttonPrimary:hover {
+    filter: brightness(0.92);
+  }
+}

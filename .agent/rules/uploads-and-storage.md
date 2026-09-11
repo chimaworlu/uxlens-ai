@@ -10,7 +10,7 @@ Cloudflare R2 is the only file store. This file governs the mechanics of getting
 
 - Files never pass through the Next.js application server. The flow is: client requests a presigned R2 PUT URL from the server → client uploads directly to R2 → client notifies the server the upload completed → server creates the `Document` row and enqueues `document-processing`. If you write code where a file's bytes flow through a Next.js route handler, that's the wrong pattern — stop and use the presign flow instead.
 - Accepted types: PDF, DOCX, TXT, CSV. Nothing else, even if a library could technically handle another format — that's scope, not a storage detail, and belongs in a PRD conversation, not a quiet addition.
-- Max 20 MB per file, max 25 documents per project (10 for free tier). Both are checked server-side before a presigned URL is issued — never rely on the client to stop an oversized upload.
+- Max 20 MB per file, max 20 documents per project (1 for free tier). Both are checked server-side before a presigned URL is issued — never rely on the client to stop an oversized upload.
 
 ## Object keys
 
@@ -29,7 +29,7 @@ Cloudflare R2 is the only file store. This file governs the mechanics of getting
 
 ## Storage caps and cost
 
-- Free tier: 100 MB/user. Pro: 2 GB/user. Enforced at presign time — a user already over cap cannot get a new presigned URL, even for a small file. This is a cost control, not just a fairness feature; unchecked storage growth is a direct line item. *(FR-42)*
+- Free tier: 30 MB/project. Pro: 500 MB/project. Same scope as the document-count cap, not account-wide — enforced at presign time, a project already over cap cannot get a new presigned URL, even for a small file. This is a cost control, not just a fairness feature; unchecked storage growth is a direct line item. *(FR-42)*
 - The 300-word minimum and 300k-token maximum on total project text (FR-22, FR-22b) are analysis-time checks, not upload-time checks — a project can accumulate documents past the analysis floor or ceiling; the block happens when analysis is triggered, not when a file is uploaded.
 
 ## Deletion and cleanup

@@ -1,0 +1,1024 @@
+.emptyState {
+  margin-top: var(--ds-spacing-xxl);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--ds-spacing-sm);
+  padding: var(--ds-spacing-xxl) var(--ds-spacing-lg);
+}
+
+.emptyState > svg {
+  color: var(--color-roles-on-surface-variant);
+  margin-bottom: var(--ds-spacing-sm);
+}
+
+.emptyState h2 {
+  color: var(--color-roles-on-surface);
+  margin: 0;
+}
+
+.emptyState p {
+  max-width: 460px;
+  color: var(--color-roles-on-surface-variant);
+  margin: 0;
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--ds-spacing-sm);
+  width: 100%;
+  max-width: 280px;
+  margin-top: var(--ds-spacing-sm);
+}
+
+.emptyState > button,
+.emptyState > a {
+  margin-top: var(--ds-spacing-sm);
+}
+
+/* ---------- in-progress ---------- */
+/* Track and icon are separate layers on purpose: only the track spins,
+   the document icon stays put in the center — a rotating icon reads as
+   broken, not "loading". */
+.progressRing {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 96px;
+  height: 96px;
+  margin-bottom: var(--ds-spacing-sm);
+}
+
+.progressRingTrack {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 4px solid var(--color-roles-surface-variant);
+  border-top-color: var(--color-roles-primary);
+  border-right-color: var(--color-roles-primary);
+  animation: spin 1.4s linear infinite;
+}
+
+.progressRing svg {
+  position: relative;
+  color: var(--color-roles-primary);
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.stageCard {
+  width: 100%;
+  max-width: 460px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-spacing-md);
+  background-color: var(--color-roles-surface-container-low);
+  border: var(--ds-hairline-border);
+  border-radius: var(--ds-radius-medium);
+  padding: var(--ds-spacing-lg);
+  margin-top: var(--ds-spacing-md);
+  text-align: left;
+}
+
+.stageRow {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-spacing-md);
+  color: var(--color-roles-on-surface);
+}
+
+.checkCircle {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background-color: var(--color-roles-success-container);
+  color: var(--color-roles-on-success-container);
+}
+
+.activeIcon {
+  flex-shrink: 0;
+  color: var(--color-roles-primary);
+}
+
+.stagePending {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1.5px solid var(--color-roles-surface-variant);
+}
+
+.stageTextPending {
+  color: var(--color-roles-on-surface-variant);
+}
+
+.hint {
+  color: var(--color-roles-on-surface-variant);
+  margin-top: var(--ds-spacing-md);
+}
+
+/* ---------- quota lock ---------- */
+.lockIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background-color: var(--color-roles-tertiary-container);
+  color: var(--color-roles-on-tertiary-container);
+  margin-bottom: var(--ds-spacing-sm);
+}
+
+/* ---------- top bar: brand + breadcrumb + version, inline ---------- */
+.navLeft {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-spacing-lg);
+}
+
+/* ---------- top-bar actions (Insights only, per nav rules — Chat has its
+   own equivalent copy in chat.module.css, not shared with this one) ---------- */
+.navActions {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-spacing-sm);
+}
+
+.versionMenu {
+  position: relative;
+}
+
+.versionTrigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background-color: var(--color-roles-surface);
+  border: var(--ds-hairline-border);
+  border-radius: var(--ds-radius-full);
+  padding: 4px var(--ds-spacing-md);
+  color: var(--color-roles-on-surface);
+  cursor: pointer;
+}
+
+.versionPanel {
+  position: absolute;
+  top: calc(100% + var(--ds-spacing-xs));
+  left: 0;
+  width: max(280px, 100%);
+  z-index: 15;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--color-roles-surface);
+  border-radius: var(--ds-radius-medium);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 15%);
+  padding: var(--ds-spacing-xs);
+  gap: 2px;
+}
+
+.versionRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ds-spacing-md);
+  text-align: left;
+  background: none;
+  border: none;
+  border-radius: var(--ds-radius-small);
+  padding: var(--ds-spacing-sm) var(--ds-spacing-md);
+  cursor: pointer;
+  color: var(--color-roles-on-surface);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .versionRow:hover {
+    background-color: var(--color-roles-surface-container-low);
+  }
+}
+
+.versionRowSelected,
+.versionRowSelected:hover {
+  background-color: var(--color-roles-primary-container);
+}
+
+.versionRowText {
+  display: flex;
+  flex-direction: column;
+}
+
+.versionRowTitle {
+  color: var(--color-roles-on-surface);
+}
+
+.versionRowSelected .versionRowTitle {
+  color: var(--color-roles-primary);
+  font-weight: 600;
+}
+
+.versionRowMeta {
+  color: var(--color-roles-on-surface-variant);
+}
+
+.versionRowSelected svg {
+  flex-shrink: 0;
+  color: var(--color-roles-primary);
+}
+
+.versionDivider {
+  border: none;
+  border-top: var(--ds-hairline-border);
+  margin: var(--ds-spacing-xs) 0;
+}
+
+.versionFooter {
+  color: var(--color-roles-on-surface-variant);
+  padding: 0 var(--ds-spacing-md) var(--ds-spacing-sm);
+  margin: 0;
+}
+
+.versionUpgradeLink {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+  color: var(--color-roles-primary);
+  text-decoration: underline;
+}
+
+.exportButton {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-spacing-xs);
+}
+
+.rerunButton {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-spacing-xs);
+}
+
+/* ---------- mobile top-bar overflow menu ----------
+   Same pattern as chat.module.css's version: Export collapses into a
+   small overflow menu next to Re-run analysis on narrow viewports, since
+   Re-run analysis is the primary action and stays a full, visible button
+   either way. The trigger is the LAST element in .navActions (after
+   Re-run analysis) so its right edge lands flush with the row's own right
+   edge once .navActions is right-aligned on mobile below — that's what
+   keeps the right-anchored 160px menu on-screen instead of computing a
+   negative left edge. */
+.overflowWrap {
+  position: relative;
+  display: none;
+}
+
+.overflowButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  background: none;
+  border: var(--ds-hairline-border);
+  border-radius: var(--ds-radius-medium);
+  padding: 0;
+  cursor: pointer;
+  color: var(--color-roles-on-surface-variant);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .overflowButton:hover {
+    color: var(--color-roles-on-surface);
+    background-color: var(--color-roles-surface-container-low);
+  }
+}
+
+.overflowMenu {
+  position: absolute;
+  top: calc(100% + var(--ds-spacing-xs));
+  right: 0;
+  min-width: 160px;
+  background-color: var(--color-roles-surface-container-lowest);
+  border: var(--ds-hairline-border);
+  border-radius: var(--ds-radius-small);
+  box-shadow: var(--effect-button-shadow-soft);
+  padding: var(--ds-spacing-xs);
+  z-index: 5;
+}
+
+.overflowMenuItem {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--color-roles-on-surface);
+  text-decoration: none;
+  border-radius: var(--ds-radius-small);
+  padding: var(--ds-spacing-sm);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .overflowMenuItem:hover {
+    background-color: var(--color-roles-surface-container-low);
+  }
+}
+
+/* ---------- stale banner ---------- */
+.staleBanner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ds-spacing-md);
+  background-color: var(--color-roles-tertiary-container);
+  color: var(--color-roles-on-tertiary-container);
+  padding: var(--ds-spacing-md) var(--ds-spacing-xxl);
+}
+
+.staleBannerText {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-spacing-sm);
+}
+
+.staleBannerLink {
+  color: inherit;
+  text-decoration: underline;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  font: inherit;
+  flex-shrink: 0;
+}
+
+/* ---------- two-column layout ---------- */
+.insightsLayout {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--ds-spacing-xxl);
+  margin-top: var(--ds-spacing-lg);
+}
+
+.insightsNav {
+  position: sticky;
+  top: var(--ds-spacing-lg);
+  align-self: flex-start;
+  flex-shrink: 0;
+  width: 150px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.insightsNavItem {
+  display: block;
+  text-align: left;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: var(--ds-spacing-sm) var(--ds-spacing-md);
+  border-radius: var(--ds-radius-full);
+  color: var(--color-roles-on-surface-variant);
+  text-decoration: none;
+}
+
+.insightsNavItemActive {
+  background-color: var(--color-roles-primary-container);
+  color: var(--color-roles-on-primary-container);
+}
+
+.insightsMain {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-spacing-xxl);
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-spacing-md);
+  scroll-margin-top: var(--ds-spacing-lg);
+}
+
+.sectionHeading {
+  color: var(--color-roles-on-surface);
+  margin: 0;
+}
+
+/* ---------- summary card ---------- */
+.summaryCard {
+  background-color: var(--color-roles-surface);
+  border: var(--ds-hairline-border);
+  border-radius: var(--ds-radius-medium);
+  padding: var(--ds-spacing-lg);
+  color: var(--color-roles-on-surface);
+}
+
+.summaryCard p {
+  margin: 0;
+}
+
+/* ---------- insight cards ---------- */
+.insightCard {
+  background-color: var(--color-roles-surface);
+  border: var(--ds-hairline-border);
+  border-radius: var(--ds-radius-medium);
+  padding: var(--ds-spacing-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-spacing-sm);
+}
+
+/* Paler than the citation chips' own primary-container fill on purpose —
+   full-strength would match the chips exactly and make them disappear
+   against the card. */
+.insightCardStarred {
+  background-color: color-mix(in srgb, var(--color-roles-primary-container) 45%, var(--color-roles-surface));
+  border-color: transparent;
+}
+
+.insightCardHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--ds-spacing-md);
+}
+
+.insightTitleGroup {
+  display: flex;
+  align-items: baseline;
+  gap: var(--ds-spacing-sm);
+}
+
+.insightNumber {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background-color: var(--color-roles-primary-container);
+  color: var(--color-roles-on-primary-container);
+  font-size: 0.75rem;
+}
+
+.insightTitle {
+  color: var(--color-roles-on-surface);
+  margin: 0;
+}
+
+.insightMeta {
+  color: var(--color-roles-on-surface-variant);
+  margin: 0;
+}
+
+.insightDescription {
+  color: var(--color-roles-on-surface);
+  margin: 0;
+}
+
+.insightActions {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--ds-spacing-xs);
+}
+
+.iconGhostButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: none;
+  border: none;
+  border-radius: var(--ds-radius-small);
+  padding: 0;
+  cursor: pointer;
+  color: var(--color-roles-on-surface-variant);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .iconGhostButton:hover {
+    background-color: var(--color-roles-surface-container-low);
+    color: var(--color-roles-on-surface);
+  }
+}
+
+.starButtonActive {
+  color: var(--color-roles-tertiary);
+}
+
+.iconGhostButtonSuccess {
+  color: var(--color-roles-success);
+}
+
+.citationChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ds-spacing-xs);
+}
+
+.citationChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 220px;
+  background-color: var(--color-roles-primary-container);
+  color: var(--color-roles-on-primary-container);
+  border: none;
+  border-radius: var(--ds-radius-full);
+  padding: 4px var(--ds-spacing-sm);
+  cursor: pointer;
+  font-size: 0.8125rem;
+}
+
+.citationChip svg {
+  flex-shrink: 0;
+}
+
+/* The filename needs its own element for text-overflow: ellipsis to work
+   correctly — .citationChip is a flex row (icon + filename), and
+   text-overflow only truncates a block/inline-block's own overflowed
+   text, not one specific child of a flex container while leaving its
+   sibling (the icon) alone. min-width: 0 overrides a flex item's default
+   min-width: auto, which would otherwise let this span grow past its
+   flex-basis to fit the text instead of actually truncating. */
+.citationChipLabel {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.citationChipActive {
+  background-color: var(--color-roles-primary);
+  color: var(--color-roles-on-primary);
+}
+
+.emptySectionBox {
+  background-color: var(--color-roles-surface-container-low);
+  border-radius: var(--ds-radius-medium);
+  padding: var(--ds-spacing-xxl);
+  text-align: center;
+  color: var(--color-roles-on-surface-variant);
+}
+
+/* ---------- citation panel ---------- */
+.citationOverlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgb(0 0 0 / 40%);
+  z-index: 20;
+}
+
+.citationPanel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  /* 100%, not 100vw — this is fixed-positioned (containing block is
+     already the viewport), and 100vw can be a few px wider than that in
+     browsers that don't subtract the scrollbar gutter from it, which was
+     enough to make the panel itself contribute to horizontal page-drag on
+     mobile. left stays unset/auto on purpose: with right: 0 and an
+     explicit width, the browser solves left from those, which is what
+     anchors the panel to the right edge — setting left: 0 too would
+     over-constrain the box and the spec-mandated resolution (drop right,
+     keep left) would flip it to the left edge instead.
+     Full width by default, not min(420px, 100%) — 420px was meant as a
+     desktop-only cap, but the largest phones (e.g. iPhone Pro Max, 430px
+     CSS width) are already wider than that, so the min() was clipping the
+     panel short on exactly the phones it needed to cover, leaving a gap
+     where the dimmed overlay showed through. The 420px cap only applies
+     above the app's usual mobile/desktop breakpoint instead (below). */
+  width: 100%;
+  background-color: var(--color-roles-surface);
+  box-shadow: -4px 0 24px rgb(0 0 0 / 15%);
+  z-index: 21;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  padding: var(--ds-spacing-lg);
+  gap: var(--ds-spacing-lg);
+}
+
+.citationPanelHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--ds-spacing-md);
+}
+
+.citationPanelTitle {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-spacing-sm);
+}
+
+.citationPanelTitle svg {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  color: var(--color-roles-on-surface-variant);
+}
+
+.citationPanelFilename {
+  color: var(--color-roles-on-surface);
+  margin: 0;
+}
+
+.citationPanelPage {
+  color: var(--color-roles-on-surface-variant);
+  margin: 0;
+}
+
+.citationSourceChip {
+  /* .citationPanel is a COLUMN flex container, so height is its main
+     axis. A flex item with overflow != visible (needed here for the
+     ellipsis) gets an automatic minimum size of 0 on the main axis — so
+     when a citation's total content (long excerpt, several "other
+     sources" chips) is taller than the panel's fixed viewport height,
+     the flex-shrink algorithm is free to compress this pill all the way
+     down to its padding instead of the panel just scrolling
+     (overflow-y: auto on .citationPanel), producing a collapsed,
+     textless bar. flex-shrink: 0 opts this item out of that squeeze —
+     it should never shrink, only the panel should scroll. */
+  flex-shrink: 0;
+  min-width: 0;
+  align-self: flex-start;
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  background-color: var(--color-roles-primary-container);
+  color: var(--color-roles-on-primary-container);
+  border-radius: var(--ds-radius-full);
+  padding: 4px var(--ds-spacing-md);
+}
+
+.citationBody {
+  color: var(--color-roles-on-surface);
+  line-height: 1.6;
+  margin: 0;
+}
+
+.citationHighlight {
+  background-color: var(--color-roles-tertiary-container);
+}
+
+.citationDivider {
+  border: none;
+  border-top: var(--ds-hairline-border);
+  margin: 0;
+}
+
+.citationOtherLabel {
+  color: var(--color-roles-on-surface-variant);
+  margin: 0 0 var(--ds-spacing-sm) 0;
+}
+
+.citationPanelLoading {
+  color: var(--color-roles-on-surface-variant);
+}
+
+.citationFooter {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-spacing-lg);
+}
+
+.buttonOutlined {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  background: none;
+  cursor: pointer;
+  font-weight: 400;
+  border: 1.5px solid var(--color-roles-primary);
+  color: var(--color-roles-primary);
+  border-radius: var(--ds-radius-medium);
+  padding: var(--ds-spacing-sm) var(--ds-spacing-lg);
+  transition: background-color 0.15s ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .buttonOutlined:hover {
+    background-color: var(--color-roles-primary-container);
+  }
+}
+
+/* Desktop-only: below this, .citationPanel stays full width (see its own
+   comment above) so it never falls short on any phone size. */
+@media (min-width: 721px) {
+  .citationPanel {
+    width: 420px;
+  }
+}
+
+@media (max-width: 720px) {
+  .staleBanner {
+    padding: var(--ds-spacing-md) var(--ds-spacing-lg);
+  }
+
+  /* The version dropdown lives inside navLeft, right next to the brand
+     link (both are its flex children) — layout.nav's own space-between
+     only separates navLeft as a whole from navActions, so on mobile the
+     dropdown was rendering stuck directly beside "UXLens AI" instead of
+     pushed to the row's right edge like the design shows. navLeft needs
+     its own width and space-between to push its last child (the dropdown,
+     since the breadcrumb between them is hidden) to that edge. */
+  .navLeft {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  /* Now that the trigger sits at the row's right edge (above), the panel
+     opening from left: 0 extends rightward off the edge of the screen —
+     that's the clipped "20 Aug 2026", "You're on the Fr..." text. Anchor
+     from the right instead so it opens inward from the trigger, and drop
+     the desktop 280px floor for something narrower and viewport-aware, so
+     it never gets close to the screen edges regardless of phone width. */
+  .versionPanel {
+    left: auto;
+    right: 0;
+    width: min(240px, calc(100vw - 2 * var(--ds-spacing-lg)));
+  }
+
+  /* Export and Re-run share the nav row with the brand/breadcrumb on
+     desktop; on mobile they get a row of their own (layout.nav wraps).
+     Matches the Chat tab's top bar: Export collapses into the overflow
+     menu, Re-run analysis stays full and visible, both pinned to the
+     row's right edge (not stretched to fill it — see the overflow-menu
+     comment above for why the trigger specifically needs to be last and
+     right-aligned, not just "on mobile"). */
+  .navActions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .desktopOnlyAction {
+    display: none;
+  }
+
+  .overflowWrap {
+    display: inline-flex;
+  }
+
+  .insightsLayout {
+    flex-direction: column;
+  }
+
+  /* Sticky on desktop already (the vertical sidebar, above) — this was
+     overridden to static for the mobile horizontal chip row, so scrolling
+     past it lost quick access to jump between sections until you scrolled
+     all the way back up. Pinning it here matches the desktop behavior:
+     background/z-index/border so it reads as a solid bar over the content
+     scrolling underneath it, not a transparent one. */
+  .insightsNav {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    flex-direction: row;
+    width: 100%;
+    overflow-x: auto;
+    padding: var(--ds-spacing-sm) 0;
+    background-color: var(--color-roles-surface);
+    border-bottom: var(--ds-hairline-border);
+  }
+
+  /* Without this, a flex item shrinks and wraps its own text before the
+     row overflows, so "Pain Points" broke onto two lines inside its chip
+     instead of the row scrolling horizontally the way it's meant to. */
+  .insightsNavItem {
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+}
+
+.errorText {
+  color: var(--color-roles-error);
+}
+
+/* Inline text link inside the "unverified" refusal message — deliberately
+   not a button-shaped CTA (border/background), since it needs to read as
+   part of the sentence it sits in, the same way the sign-up form's
+   "Verify email" link does. */
+.inlineVerifyLink {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: var(--color-roles-primary);
+  text-decoration: underline;
+}
+
+.inlineVerifyLink:disabled {
+  color: var(--color-roles-on-surface-variant);
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ---------- verify email modal ----------
+   Same shape/behavior as the sign-up flow's PreSignupVerifyModal
+   (app/(marketing)/auth/auth.module.css) — duplicated here rather than
+   imported, matching how this app handles every other per-page modal. */
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgb(0 0 0 / 0.4);
+  padding: var(--ds-spacing-lg);
+  z-index: 30;
+}
+
+.verifyModalCard {
+  width: 100%;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-spacing-md);
+  background-color: var(--color-roles-surface-container-lowest);
+  border-radius: var(--ds-radius-large);
+  box-shadow: var(--effect-button-shadow-soft);
+  padding: var(--ds-spacing-xl);
+}
+
+.modalCentered {
+  position: relative;
+  align-items: center;
+  text-align: center;
+}
+
+.dialogIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--ds-radius-full);
+}
+
+.dialogIconInfo {
+  background-color: var(--color-roles-primary-container);
+  color: var(--color-roles-on-primary-container);
+}
+
+.verifyModalBodyText {
+  margin: 0;
+  color: var(--color-roles-on-surface-variant);
+}
+
+.verifyForm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-spacing-md);
+}
+
+.verifyField {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-spacing-xs);
+}
+
+.otpInput {
+  display: flex;
+  gap: var(--ds-spacing-xs);
+}
+
+.otpBox {
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 48px;
+  aspect-ratio: 1 / 1;
+  text-align: center;
+  font: inherit;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--color-roles-on-surface);
+  background-color: var(--color-roles-surface-container-lowest);
+  border: var(--ds-hairline-border);
+  border-radius: var(--ds-radius-medium);
+  padding: 0;
+}
+
+.otpBox:focus {
+  border-color: var(--color-roles-primary);
+}
+
+.resendRow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ds-spacing-xs);
+  color: var(--color-roles-on-surface-variant);
+}
+
+.resendLink {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: var(--color-roles-primary);
+}
+
+.resendLink:disabled {
+  color: var(--color-roles-on-surface-variant);
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.otpActions {
+  display: flex;
+  gap: var(--ds-spacing-sm);
+}
+
+.verifiedIllustration {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 80px;
+  height: 80px;
+  border-radius: var(--ds-radius-full);
+  background-color: var(--color-roles-success);
+  color: var(--color-roles-on-success);
+  animation: verifiedPopIn 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes verifiedPopIn {
+  0% {
+    transform: scale(0.5);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.08);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes verifiedDraw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* Dasharray is the checkmark path's approximate length (two segments,
+   4,4 then 8,-9 ⇒ √32 + √145 ≈ 17.7, rounded up to 19 for a small margin)
+   — delayed slightly so the circle's pop-in settles first, then the check
+   strokes in, same technique most "verified" Lottie animations use. */
+.verifiedBadgeCheck {
+  stroke-dasharray: 19;
+  stroke-dashoffset: 19;
+  animation: verifiedDraw 0.3s ease-out 0.25s forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .verifiedIllustration,
+  .verifiedBadgeCheck {
+    animation: none;
+  }
+
+  .verifiedBadgeCheck {
+    stroke-dashoffset: 0;
+  }
+}
+
+@media (max-width: 720px) {
+  .modalOverlay {
+    padding: var(--ds-spacing-md);
+  }
+
+  .verifyModalCard {
+    max-width: 100%;
+    padding: var(--ds-spacing-lg);
+  }
+
+  .otpActions {
+    flex-direction: column;
+  }
+}

@@ -1,0 +1,433 @@
+/* ---------- message list ---------- */
+.messageList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-spacing-xl);
+  padding-bottom: var(--ds-spacing-xxl);
+}
+
+.userRow {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.userBubble {
+  max-width: 70%;
+  background-color: var(--color-roles-primary-container);
+  color: var(--color-roles-on-primary-container);
+  /* large, not full — a true pill (999px) on a bubble this tall reads as
+     a stadium/capsule shape rather than a chat bubble, especially once a
+     longer message wraps to multiple lines on a narrow mobile viewport.
+     radius-large (16px) is the closed scale's closest match to the
+     familiar ChatGPT-style bubble: still clearly rounded, but a corner
+     radius rather than a full stadium. */
+  border-radius: var(--ds-radius-large);
+  padding: var(--ds-spacing-md) var(--ds-spacing-lg);
+}
+
+.assistantMessage {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-spacing-sm);
+  max-width: 720px;
+}
+
+.assistantText {
+  color: var(--color-roles-on-surface);
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+/* ---------- typing indicator ---------- shown while an assistant message
+   is streaming but no delta has arrived yet, in the same left-aligned
+   spot the real text will occupy, so nothing shifts when it arrives. */
+.typingIndicator {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  height: 24px;
+}
+
+.typingDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: var(--color-roles-on-surface-variant);
+  animation: typingBounce 1.2s infinite ease-in-out;
+}
+
+.typingDot:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.typingDot:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes typingBounce {
+  0%,
+  60%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.5;
+  }
+  30% {
+    transform: translateY(-4px);
+    opacity: 1;
+  }
+}
+
+.refusalHint {
+  color: var(--color-roles-on-surface-variant);
+  margin: 0;
+}
+
+/* Neutral, not a warning — this is an aside, not an alert, so it borrows
+   the same low-emphasis surface used for empty-state boxes elsewhere
+   (insights.module.css's .emptySectionBox) rather than the tertiary
+   (amber) treatment reserved for actual notices like .staleBanner. */
+.generalKnowledge {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-spacing-xs);
+  background-color: var(--color-roles-surface-container-low);
+  border: var(--ds-hairline-border);
+  border-radius: var(--ds-radius-medium);
+  padding: var(--ds-spacing-lg);
+}
+
+.generalKnowledgeLabel {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-spacing-xs);
+  color: var(--color-roles-on-surface-variant);
+}
+
+.generalKnowledgeLabel svg {
+  flex-shrink: 0;
+}
+
+.generalKnowledgeText {
+  color: var(--color-roles-on-surface);
+  margin: 0;
+}
+
+/* ---------- cap-reached banner (above the input, not a full-page state —
+   the thread stays visible, only sending is blocked) ---------- */
+.capBanner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ds-spacing-md);
+  background-color: var(--color-roles-tertiary-container);
+  color: var(--color-roles-on-tertiary-container);
+  border-radius: var(--ds-radius-medium);
+  padding: var(--ds-spacing-md) var(--ds-spacing-lg);
+  margin-bottom: var(--ds-spacing-sm);
+}
+
+.capBannerLink {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+  color: inherit;
+  text-decoration: underline;
+  flex-shrink: 0;
+  font-weight: 600;
+}
+
+/* ---------- input dock ---------- */
+.inputDock {
+  position: sticky;
+  bottom: 0;
+  background-color: var(--color-roles-surface);
+  padding: var(--ds-spacing-lg) 0;
+}
+
+.inputRow {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-spacing-sm);
+}
+
+.textInput {
+  flex: 1;
+  min-width: 0;
+  background-color: var(--color-roles-surface);
+  /* Idle/unfocused starts muted on purpose — the pale primary-container
+     tint, not a neutral gray, so it still reads as "our primary color,"
+     just quiet — and only switches to the full-strength primary color
+     once the user actually clicks in (see :focus). A second outline ring
+     (like the app's usual ds-focus-ring utility) would read as a double
+     stroke on top of this border, so focus is expressed as a border-color
+     change on this same single stroke instead, with outline explicitly
+     suppressed so no browser-native ring doubles up on it either. */
+  border: 1.5px solid var(--color-roles-primary-container);
+  border-radius: var(--ds-radius-full);
+  padding: var(--ds-spacing-md) var(--ds-spacing-lg);
+  color: var(--color-roles-on-surface);
+  outline: none;
+}
+
+.textInput:focus {
+  border-color: var(--color-roles-primary);
+}
+
+.textInput:disabled {
+  border-color: var(--color-roles-primary-container);
+  color: var(--color-roles-on-surface-variant);
+  cursor: not-allowed;
+}
+
+.sendButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--ds-radius-full);
+  border: none;
+  background-color: var(--color-roles-primary);
+  color: var(--color-roles-on-primary);
+  cursor: pointer;
+}
+
+.sendButton:disabled {
+  background-color: var(--color-roles-surface-container-low);
+  color: var(--color-roles-on-surface-variant);
+  cursor: not-allowed;
+}
+
+.inputCaption {
+  text-align: center;
+  color: var(--color-roles-on-surface-variant);
+  margin: var(--ds-spacing-sm) 0 0;
+}
+
+/* ---------- clear history confirmation ---------- */
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgb(0 0 0 / 0.4);
+  padding: var(--ds-spacing-lg);
+  z-index: 10;
+}
+
+.modal {
+  width: 100%;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-spacing-md);
+  background-color: var(--color-roles-surface-container-lowest);
+  border-radius: var(--ds-radius-large);
+  box-shadow: var(--effect-button-shadow-soft);
+  padding: var(--ds-spacing-xl);
+}
+
+.modalCentered {
+  align-items: center;
+  text-align: center;
+}
+
+.modalCentered .buttonDanger,
+.modalCentered .buttonSecondary {
+  width: 100%;
+}
+
+.modalBodyText {
+  margin: 0;
+  color: var(--color-roles-on-surface-variant);
+}
+
+.dialogIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--ds-radius-full);
+}
+
+.dialogIconDanger {
+  background-color: var(--color-roles-error-container);
+  color: var(--color-roles-on-error-container);
+}
+
+.buttonDanger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  cursor: pointer;
+  font-weight: 400;
+  background-color: var(--color-roles-error-container);
+  color: var(--color-roles-on-error-container);
+  border-radius: var(--ds-radius-medium);
+  padding: var(--ds-spacing-sm) var(--ds-spacing-lg);
+  transition: filter 0.15s ease;
+}
+
+.buttonDanger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .buttonDanger:hover:not(:disabled) {
+    filter: brightness(0.95);
+  }
+}
+
+.buttonSecondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: var(--ds-hairline-border);
+  cursor: pointer;
+  font-weight: 400;
+  background-color: transparent;
+  color: var(--color-roles-on-surface);
+  border-radius: var(--ds-radius-medium);
+  padding: var(--ds-spacing-sm) var(--ds-spacing-lg);
+  transition: background-color 0.15s ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .buttonSecondary:hover {
+    background-color: var(--color-roles-surface-container-low);
+  }
+}
+
+/* ---------- top bar actions ----------
+   Chat gets its own .navActions (not insights.module.css's shared one)
+   specifically so its mobile behavior can diverge from Insights: on
+   mobile here, Re-run analysis and the overflow trigger sit together at
+   the row's right edge at their natural width, not stretched via
+   insights.module.css's ".navActions > button { flex: 1 }" rule — see the
+   overflow-menu comment below for why the trigger's position specifically
+   depends on this. Desktop is unchanged either way: plain flex row,
+   left-aligned, same as insights.module.css's version. */
+.navActions {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-spacing-sm);
+}
+
+/* Local equivalents of insights.module.css's .exportButton/.rerunButton
+   (icon + text spacing only) — NOT shared with them. Sharing those was
+   the actual bug behind the mobile overflow menu appearing to do nothing:
+   .exportButton's unconditional "display: inline-flex" and
+   .desktopOnlyAction's media-scoped "display: none" are both single-class
+   selectors on the same element, so it came down to a same-specificity
+   tie the unconditional rule was winning — the button never actually hid
+   on mobile, it just visually sat next to the new overflow trigger. Two
+   different rules controlling the same property on the same element from
+   two different files, one of them conditional, is exactly the kind of
+   thing that ties and silently breaks — give chat's own buttons chat's
+   own classes instead so there's nothing left to race. */
+.actionButtonIcon {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-spacing-xs);
+}
+
+/* ---------- mobile top-bar overflow menu ----------
+   Desktop keeps Clear history + Export as their own full buttons, plus
+   Re-run analysis: three buttons fit fine at desktop widths. On narrow
+   viewports, three full buttons in one row got cramped, so on mobile
+   Clear history and Export collapse into a single small overflow menu
+   next to Re-run analysis, which stays a full, visible primary button
+   either way.
+
+   The trigger must be the LAST element in .navActions, not the first:
+   .overflowMenu below opens with `right: 0`, anchored to the trigger's own
+   right edge, at a fixed 160px width. With .navActions right-aligned
+   (mobile, below) and the trigger last, the trigger's right edge lands
+   flush with the row's own right edge — i.e. (viewport width − .nav's
+   horizontal padding) — which leaves ~150-700px of clearance for the menu
+   to open into on any real phone width. Putting the trigger first (at the
+   row's LEFT edge instead) was the original bug: right: 0 was then
+   anchored to a point only ~20-32px from the screen's left edge, so the
+   160px menu computed a negative left edge and rendered almost entirely
+   off-screen — the menu box was visible (it's real, non-zero size) but
+   its text, all the way on the box's left side, was not. */
+.overflowWrap {
+  position: relative;
+  display: none;
+}
+
+.overflowButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  background: none;
+  border: var(--ds-hairline-border);
+  border-radius: var(--ds-radius-medium);
+  padding: 0;
+  cursor: pointer;
+  color: var(--color-roles-on-surface-variant);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .overflowButton:hover {
+    color: var(--color-roles-on-surface);
+    background-color: var(--color-roles-surface-container-low);
+  }
+}
+
+.overflowMenu {
+  position: absolute;
+  top: calc(100% + var(--ds-spacing-xs));
+  right: 0;
+  min-width: 160px;
+  background-color: var(--color-roles-surface-container-lowest);
+  border: var(--ds-hairline-border);
+  border-radius: var(--ds-radius-small);
+  box-shadow: var(--effect-button-shadow-soft);
+  padding: var(--ds-spacing-xs);
+  z-index: 5;
+}
+
+.overflowMenuItem {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--color-roles-on-surface);
+  text-decoration: none;
+  border-radius: var(--ds-radius-small);
+  padding: var(--ds-spacing-sm);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .overflowMenuItem:hover {
+    background-color: var(--color-roles-surface-container-low);
+  }
+}
+
+@media (max-width: 720px) {
+  .navActions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .desktopOnlyAction {
+    display: none;
+  }
+
+  .overflowWrap {
+    display: inline-flex;
+  }
+}

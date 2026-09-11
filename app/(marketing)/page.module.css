@@ -1,0 +1,494 @@
+.page {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---------- post-account-deletion banner (FR-38) ---------- */
+.deletedBanner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ds-spacing-sm);
+  padding: var(--ds-spacing-md) var(--ds-spacing-lg);
+  background-color: var(--color-roles-success-container);
+  color: var(--color-roles-on-success-container);
+  text-align: center;
+}
+
+/* ---------- nav ---------- */
+.nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ds-spacing-lg);
+  padding: var(--ds-spacing-base) var(--ds-spacing-xxl);
+}
+
+@media (max-width: 720px) {
+  .nav {
+    flex-wrap: wrap;
+    justify-content: space-between;
+    padding: var(--ds-spacing-base) var(--ds-spacing-lg);
+  }
+
+  .navBrand,
+  .hamburger {
+    flex: 0 0 auto;
+  }
+
+  .navLinks {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .main {
+    padding: var(--ds-spacing-lg);
+  }
+
+  .hero {
+    max-width: 100%;
+  }
+
+  .section {
+    max-width: 100%;
+  }
+
+  .testimonialGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .contactCard {
+    padding: var(--ds-spacing-lg);
+  }
+}
+
+@media (max-width: 420px) {
+  .nav {
+    align-items: center;
+    gap: var(--ds-spacing-sm);
+  }
+
+  .main {
+    padding: var(--ds-spacing-md);
+  }
+
+  .heroActions {
+    gap: var(--ds-spacing-sm);
+  }
+
+  .hero h1,
+  .section h2 {
+    text-wrap: balance;
+  }
+
+  .contactCard {
+    padding: var(--ds-spacing-md);
+  }
+
+  .navMenuOpen {
+    padding: var(--ds-spacing-xl) var(--ds-spacing-md);
+  }
+
+  .navMenuOpen .navLinks,
+  .navMenuOpen .buttonPrimary {
+    width: 100%;
+  }
+
+  .field input,
+  .field textarea,
+  .buttonPrimary,
+  .buttonOutlined {
+    width: 100%;
+  }
+}
+
+@media (max-height: 760px) {
+  .main {
+    align-items: flex-start;
+    padding-top: var(--ds-spacing-lg);
+    padding-bottom: var(--ds-spacing-lg);
+  }
+}
+
+.navBrand {
+  background: none;
+  border: none;
+  padding: var(--ds-spacing-xs) var(--ds-spacing-sm);
+  border-radius: var(--ds-radius-small);
+  cursor: pointer;
+  color: var(--color-roles-primary);
+}
+
+.navLinks {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-spacing-sm);
+}
+
+.navLink {
+  position: relative;
+  background: none;
+  border: none;
+  padding: var(--ds-spacing-xs) var(--ds-spacing-sm);
+  border-radius: var(--ds-radius-small);
+  cursor: pointer;
+  font-weight: 400;
+  color: var(--color-roles-on-surface-variant);
+}
+
+.navLink::after {
+  content: "";
+  position: absolute;
+  left: var(--ds-spacing-sm);
+  right: var(--ds-spacing-sm);
+  bottom: 0;
+  height: 2px;
+  background-color: var(--color-roles-primary);
+  transform: scaleX(0);
+  transition: transform 0.15s ease;
+}
+
+.navLink:hover::after {
+  transform: scaleX(1);
+}
+
+.navLinkActive {
+  color: var(--color-roles-primary);
+}
+
+/* Wraps navLinks + the nav CTA purely so mobile can toggle them as one
+   group. `display: contents` makes the wrapper itself invisible to layout
+   at desktop widths — its children become direct flex items of .nav, so
+   the desktop three-column layout (brand / links / CTA) is unaffected. */
+.navMenu {
+  display: contents;
+}
+
+.hamburger {
+  display: none;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--ds-radius-small);
+  padding: var(--ds-spacing-xs);
+  cursor: pointer;
+  color: var(--color-roles-on-surface);
+}
+
+@media (max-width: 720px) {
+  .nav {
+    position: relative;
+  }
+
+  /* Pin the header bar to the viewport top while the full-screen menu is
+     open, so brand + hamburger stay reachable regardless of scroll
+     position when the menu was opened. */
+  .nav:has(.navMenuOpen) {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+  }
+
+  /* Both need to out-paint .navMenuOpen (a fixed, full-viewport sibling
+     nested inside .nav): raised above it via z-index within .nav's own
+     stacking context, so the pinned header remains visible/clickable on
+     top of the full-screen overlay instead of being covered by it. */
+  .navBrand {
+    position: relative;
+    z-index: 2;
+  }
+
+  .hamburger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    z-index: 2;
+  }
+
+  .navMenu {
+    display: none;
+  }
+
+  .navMenuOpen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--ds-spacing-xl);
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    background-color: var(--color-roles-surface);
+    padding: var(--ds-spacing-xxl);
+  }
+
+  .navMenuOpen .navLinks {
+    flex-direction: column;
+    align-items: center;
+    gap: var(--ds-spacing-lg);
+  }
+
+  .navMenuOpen .buttonPrimary {
+    width: 100%;
+    max-width: 320px;
+  }
+}
+
+/* ---------- buttons ---------- */
+.buttonPrimary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ds-spacing-xs);
+  font-weight: 400;
+  /* Transparent, not none: invisible in normal rendering, but gives forced-
+     colors mode (Windows High Contrast) a real border to substitute a system
+     color into, so the button stays legible when its background is stripped. */
+  border: 1px solid transparent;
+  cursor: pointer;
+  background-color: var(--color-roles-primary);
+  color: var(--color-roles-on-primary);
+  border-radius: var(--ds-radius-medium);
+  padding: var(--ds-spacing-sm) var(--ds-spacing-lg);
+  transition: filter 0.15s ease, box-shadow 0.15s ease;
+}
+
+.buttonOutlined {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ds-spacing-xs);
+  cursor: pointer;
+  font-weight: 400;
+  background-color: transparent;
+  color: var(--color-roles-primary);
+  border: 1px solid var(--color-roles-primary);
+  border-radius: var(--ds-radius-medium);
+  padding: var(--ds-spacing-sm) var(--ds-spacing-lg);
+  transition: background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+/* hover: hover / pointer: fine, not a screen-width check — hover is a
+   pointer-capability question, not a viewport-size one. Keeps these off
+   touchscreens, where a hover state would otherwise stick after a tap. */
+@media (hover: hover) and (pointer: fine) {
+  .buttonPrimary:hover {
+    filter: brightness(0.92);
+    box-shadow: var(--effect-button-shadow-soft);
+  }
+
+  .buttonOutlined:hover {
+    background-color: var(--color-roles-primary-container);
+    box-shadow: var(--effect-button-shadow-soft);
+  }
+}
+
+.buttonFullWidth {
+  width: 100%;
+}
+
+/* ---------- main / sections ---------- */
+.main {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--ds-spacing-xxl);
+}
+
+.hero {
+  max-width: 640px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--ds-spacing-base);
+  text-align: center;
+}
+
+.hero p {
+  /* Narrower than the 640px .hero container so the subtitle's wrapped
+     lines stay visibly contained under the headline rather than
+     stretching wider than it. */
+  max-width: 480px;
+  color: var(--color-roles-on-surface-variant);
+}
+
+.heroActions {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-spacing-md);
+  margin-top: var(--ds-spacing-xs);
+}
+
+@media (max-width: 720px) {
+  /* Same full-width, capped treatment as .navMenuOpen .buttonPrimary. */
+  .heroActions {
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+  }
+
+  .heroActions .buttonPrimary,
+  .heroActions .buttonOutlined {
+    width: 100%;
+    max-width: 320px;
+  }
+}
+
+.heroNote {
+  color: var(--color-roles-on-surface-variant);
+}
+
+.section {
+  width: 100%;
+  max-width: 1080px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--ds-spacing-base);
+  text-align: center;
+}
+
+.section p {
+  color: var(--color-roles-on-surface-variant);
+  max-width: 560px;
+}
+
+/* ---------- testimonial ---------- */
+.testimonialGrid {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--ds-spacing-lg);
+  margin-top: var(--ds-spacing-lg);
+  text-align: left;
+}
+
+.testimonialCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-spacing-lg);
+  background-color: var(--color-roles-surface-container-low);
+  border: var(--ds-hairline-border);
+  border-radius: var(--ds-radius-medium);
+  padding: var(--ds-spacing-lg);
+}
+
+.testimonialQuote {
+  font-style: italic;
+  color: var(--color-roles-on-surface);
+  margin: 0;
+}
+
+.testimonialAuthor {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-spacing-sm);
+}
+
+.avatar {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--ds-radius-full);
+  background-color: var(--color-roles-primary);
+  color: var(--color-roles-on-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.testimonialAuthorName {
+  color: var(--color-roles-on-surface);
+}
+
+.testimonialAuthorRole {
+  color: var(--color-roles-on-surface-variant);
+}
+
+/* ---------- contact ---------- */
+.contactCard {
+  width: 100%;
+  max-width: 560px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-spacing-lg);
+  background-color: var(--color-roles-surface-container-low);
+  border: var(--ds-hairline-border);
+  border-radius: var(--ds-radius-large);
+  padding: var(--ds-spacing-xl);
+  margin-top: var(--ds-spacing-lg);
+  text-align: left;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-spacing-xs);
+}
+
+.field label {
+  color: var(--color-roles-on-surface);
+}
+
+.field input,
+.field textarea {
+  font: inherit;
+  color: var(--color-roles-on-surface);
+  background-color: var(--color-roles-surface);
+  border: var(--ds-hairline-border);
+  border-radius: var(--ds-radius-small);
+  padding: var(--ds-spacing-sm) var(--ds-spacing-md);
+}
+
+.field textarea {
+  resize: vertical;
+  min-height: 96px;
+}
+
+/* ---------- footer ---------- */
+.footer {
+  border-top: var(--ds-hairline-border);
+  padding: var(--ds-spacing-xl);
+  text-align: center;
+  color: var(--color-roles-on-surface-variant);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--ds-spacing-sm);
+}
+
+.footerLinks {
+  display: flex;
+  gap: var(--ds-spacing-md);
+}
+
+.footerLinks a {
+  color: inherit;
+  text-decoration: underline;
+}
+
+@media (max-width: 720px) {
+  .testimonialGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .testimonialCard {
+    padding: var(--ds-spacing-md);
+  }
+
+  .heroActions {
+    width: 100%;
+  }
+
+  .contactCard {
+    width: 100%;
+  }
+
+  .modal-actions,
+  .contactCard button {
+    width: 100%;
+  }
+}

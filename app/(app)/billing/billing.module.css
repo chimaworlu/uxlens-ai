@@ -1,0 +1,316 @@
+.page {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--color-roles-surface);
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--ds-spacing-base) var(--ds-spacing-xxl);
+  background-color: var(--color-roles-surface);
+}
+
+.brand {
+  color: var(--color-roles-primary);
+}
+
+.avatarLink {
+  display: inline-flex;
+  border-radius: 50%;
+  text-decoration: none;
+}
+
+.avatar {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background-color: var(--color-roles-primary-container);
+  color: var(--color-roles-on-primary-container);
+}
+
+.main {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  padding: var(--ds-spacing-xxl);
+}
+
+.content {
+  width: 100%;
+  max-width: 640px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-spacing-md);
+}
+
+.breadcrumb {
+  color: var(--color-roles-on-surface-variant);
+}
+
+.breadcrumbLink {
+  color: inherit;
+  text-decoration: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .breadcrumbLink:hover {
+    text-decoration: underline;
+  }
+}
+
+.breadcrumbCurrent {
+  color: var(--color-roles-on-surface);
+}
+
+.heading {
+  color: var(--color-roles-on-surface);
+  margin: 0 0 var(--ds-spacing-sm) 0;
+}
+
+.link {
+  color: var(--color-roles-primary);
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font: inherit;
+  text-decoration: underline;
+}
+
+.errorText {
+  color: var(--color-roles-error);
+}
+
+/* ---------- cards ---------- */
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-spacing-md);
+  background-color: var(--color-roles-surface-container-lowest);
+  border: var(--ds-hairline-border);
+  border-radius: var(--ds-radius-large);
+  padding: var(--ds-spacing-xl);
+}
+
+.cardSubtext {
+  margin: 0;
+  color: var(--color-roles-on-surface-variant);
+}
+
+/* ---------- plan card ---------- */
+.planRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--ds-spacing-md);
+}
+
+.planTitleRow {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-spacing-sm);
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: var(--ds-radius-full);
+  padding: 2px var(--ds-spacing-sm);
+}
+
+.badgeFree {
+  background-color: var(--color-roles-surface-container-high);
+  color: var(--color-roles-on-surface-variant);
+}
+
+.badgeActive {
+  background-color: var(--color-roles-primary-container);
+  color: var(--color-roles-on-primary-container);
+}
+
+.badgeCancelling {
+  background-color: var(--color-roles-tertiary-container);
+  color: var(--color-roles-on-tertiary-container);
+}
+
+/* ---------- usage meters ---------- */
+.meter {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-spacing-xs);
+}
+
+.meterLabelRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  color: var(--color-roles-on-surface-variant);
+}
+
+.meterLabelRow > span:first-child {
+  color: var(--color-roles-on-surface);
+}
+
+.meterTrack {
+  height: 6px;
+  border-radius: var(--ds-radius-full);
+  background-color: var(--color-roles-surface-variant);
+  overflow: hidden;
+}
+
+.meterFill {
+  height: 100%;
+  background-color: var(--color-roles-primary);
+  transition: width 0.15s ease;
+}
+
+.meterFillNearCap {
+  background-color: var(--color-roles-error);
+}
+
+/* ---------- upgrade banner ---------- */
+.upgradeBanner {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--ds-spacing-sm);
+  background-color: var(--color-roles-primary-container);
+  color: var(--color-roles-on-primary-container);
+  border-radius: var(--ds-radius-large);
+  padding: var(--ds-spacing-xl);
+}
+
+.upgradeBanner h2 {
+  margin: 0;
+  color: inherit;
+}
+
+.upgradeBanner p {
+  margin: 0;
+}
+
+.buttonPrimary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  cursor: pointer;
+  font-weight: 400;
+  background-color: var(--color-roles-primary);
+  color: var(--color-roles-on-primary);
+  border-radius: var(--ds-radius-medium);
+  padding: var(--ds-spacing-sm) var(--ds-spacing-lg);
+}
+
+.buttonPrimary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.buttonOutlined {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  cursor: pointer;
+  font-weight: 400;
+  border: 1.5px solid var(--color-roles-primary);
+  color: var(--color-roles-primary);
+  border-radius: var(--ds-radius-medium);
+  padding: var(--ds-spacing-sm) var(--ds-spacing-lg);
+  transition: background-color 0.15s ease;
+}
+
+.buttonOutlined:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .buttonOutlined:hover:not(:disabled) {
+    background-color: var(--color-roles-primary-container);
+  }
+}
+
+/* ---------- cancel subscription ---------- */
+.cancelSection {
+  display: flex;
+}
+
+.cancelLink {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-weight: 400;
+  color: var(--color-roles-error);
+  text-decoration: underline;
+}
+
+.cancelLink:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.cancelConfirm {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--ds-spacing-md);
+  background-color: var(--color-roles-error-container);
+  color: var(--color-roles-on-error-container);
+  border-radius: var(--ds-radius-large);
+  padding: var(--ds-spacing-lg);
+  width: 100%;
+}
+
+.cancelConfirm p {
+  margin: 0;
+}
+
+.cancelConfirmActions {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-spacing-lg);
+}
+
+@media (max-width: 720px) {
+  .nav {
+    padding: var(--ds-spacing-base) var(--ds-spacing-lg);
+  }
+
+  .main {
+    padding: var(--ds-spacing-lg);
+  }
+
+  .planRow {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--ds-spacing-xs);
+  }
+
+  .buttonPrimary {
+    align-self: stretch;
+  }
+}
+
+@media (max-width: 420px) {
+  .main {
+    padding: var(--ds-spacing-md);
+  }
+
+  .nav {
+    padding: var(--ds-spacing-base) var(--ds-spacing-md);
+  }
+
+  .card {
+    padding: var(--ds-spacing-lg);
+  }
+}

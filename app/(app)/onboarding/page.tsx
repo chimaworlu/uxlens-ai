@@ -1,0 +1,252 @@
+"use client";
+
+import { useEffect, useRef, useState, type TouchEvent } from "react";
+import { useRouter } from "next/navigation";
+import styles from "./onboarding.module.css";
+
+const TOTAL_STEPS = 3;
+
+const PLAN_LIMITS: { label: string; value: string }[] = [
+  { label: "Active projects", value: "1" },
+  { label: "Documents per project", value: "1" },
+  { label: "Storage per project", value: "30 MB" },
+  { label: "Analysis runs per month", value: "2" },
+  { label: "Chat messages per day", value: "10" },
+];
+
+export default function OnboardingPage() {
+  const router = useRouter();
+
+  const [step, setStep] = useState(1);
+  // FR-1: Google sign-in always lands here first (see auth/page.tsx's
+  // GoogleButton) since there's no other single place that can tell "did
+  // this account just get auto-created, or is this a returning user" —
+  // only the credentials sign-up flow already knows that up front. A
+  // returning user with at least one project has clearly been through
+  // this before, so skip straight to the dashboard instead of replaying
+  // the walkthrough. Rendering is held back (checkingReturning) until this
+  // resolves — otherwise a returning user sees a flash of "Welcome to
+  // UXLens AI, Step 1 of 3" before the redirect kicks in, which reads as
+  // "it's signing me up again" even though no new account is created.
+  const [checkingReturning, setCheckingReturning] = useState(true);
+  const touchStartX = useRef<number | null>(null);
+  const touchStartY = useRef<number | null>(null);
+
+  useEffect(() => {
+    fetch("/api/projects")
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data: { projects: unknown[] } | null) => {
+        if (data && data.projects.length > 0) {
+          router.replace("/projects");
+          return;
+        }
+        setCheckingReturning(false);
+      })
+      .catch(() => {
+        // Stay on onboarding rather than block on a failed check.
+        setCheckingReturning(false);
+      });
+  }, [router]);
+
+  if (checkingReturning) {
+    return null;
+  }
+
+  function goNextStep() {
+    setStep((current) => Math.min(current + 1, TOTAL_STEPS));
+  }
+
+  function goPreviousStep() {
+    setStep((current) => Math.max(current - 1, 1));
+  }
+
+  function handleTouchStart(event: TouchEvent<HTMLDivElement>) {
+    const touch = event.touches[0];
+    if (!touch) return;
+    touchStartX.current = touch.clientX;
+    touchStartY.current = touch.clientY;
+  }
+
+  function handleTouchEnd(event: TouchEvent<HTMLDivElement>) {
+    if (touchStartX.current === null || touchStartY.current === null) return;
+
+    const touch = event.changedTouches[0];
+    if (!touch) return;
+    const deltaX = touch.clientX - touchStartX.current;
+    const deltaY = touch.clientY - touchStartY.current;
+
+    touchStartX.current = null;
+    touchStartY.current = null;
+
+    if (Math.abs(deltaX) < 60 || Math.abs(deltaX) < Math.abs(deltaY)) return;
+
+    if (deltaX < 0) {
+      goNextStep();
+    } else {
+      goPreviousStep();
+    }
+  }
+
+  function goToDashboard() {
+    router.push("/projects");
+  }
+
+  return (
+    <div className={styles.page}>
+      <nav className={styles.nav}>
+        <span className={`${styles.brand} ds-title-large`}>UXLens AI</span>
+      </nav>
+
+      <main className={styles.main}>
+        <div
+          className={styles.card}
+          aria-label={`Onboarding step ${step} of ${TOTAL_STEPS}`}
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+        >
+          <div className={styles.dots}>
+            {Array.from({ length: TOTAL_STEPS }, (_, i) => i + 1).map((n) => (
+              <span
+                key={n}
+                className={`${styles.dot} ${n === step ? styles.dotActive : ""}`}
+                aria-hidden="true"
+              />
+            ))}
+          </div>
+          <span className={`${styles.stepLabel} ds-label-medium`}>
+            Step {step} of {TOTAL_STEPS}
+          </span>
+
+          {step === 1 && (
+            <>
+              <button
+                type="button"
+                className={`${styles.stepSkipButton} ds-label-large ds-focus-ring`}
+                onClick={() => router.push("/projects")}
+              >
+                Skip for now
+              </button>
+              <h1 className={`${styles.heading} ds-headline-small`}>
+                Welcome to UXLens AI
+              </h1>
+              <p className={`${styles.body} ds-body-large`}>
+                Upload your interview notes, survey results, and customer
+                feedback. UXLens reads through your documents and returns
+                organized themes, key pain points, and suggestions, each one
+                linked back to the exact sentence it came from, so you can
+                trust what you&apos;re looking at.
+              </p>
+              <div className={styles.actions}>
+                <button
+                  type="button"
+                  className={`${styles.buttonPrimary} ds-label-large ds-focus-ring`}
+                  onClick={goNextStep}
+                >
+                  Continue
+                </button>
+              </div>
+            </>
+          )}
+
+          {step === 2 && (
+            <>
+              <span className={styles.iconBadge}>
+                <ShieldIcon />
+              </span>
+              <button
+                type="button"
+                className={`${styles.stepSkipButton} ds-label-large ds-focus-ring`}
+                onClick={() => router.push("/projects")}
+              >
+                Skip for now
+              </button>
+              <h1 className={`${styles.heading} ds-headline-small`}>
+                A quick note about privacy
+              </h1>
+              <p className={`${styles.body} ds-body-large`}>
+                Research documents often contain personal data about
+                participants. Remove names and identifying details you do not
+                need. Files are processed privately and used only to generate
+                your analysis.
+              </p>
+              <div className={styles.actions}>
+                <button
+                  type="button"
+                  className={`${styles.buttonPrimary} ds-label-large ds-focus-ring`}
+                  onClick={goNextStep}
+                >
+                  Continue
+                </button>
+                <button
+                  type="button"
+                  className={`${styles.buttonLink} ds-label-medium ds-focus-ring`}
+                  onClick={goPreviousStep}
+                >
+                  Back
+                </button>
+              </div>
+            </>
+          )}
+
+          {step === 3 && (
+            <>
+              <h1 className={`${styles.heading} ds-headline-small`}>
+                You&apos;re ready to start
+              </h1>
+              <p className={`${styles.body} ds-body-medium`}>
+                Your account is ready. Create your first project to begin uploading research.
+              </p>
+              <div className={styles.planTable} aria-label="Free plan limits">
+                {PLAN_LIMITS.map((row) => (
+                  <div key={row.label} className={`${styles.planRow} ds-body-medium`}>
+                    <span>{row.label}</span>
+                    <span>{row.value}</span>
+                  </div>
+                ))}
+              </div>
+              <p className={`${styles.body} ds-label-small`}>
+                You can upgrade to Pro anytime for higher limits.
+              </p>
+              <div className={styles.actions}>
+                <button
+                  type="button"
+                  className={`${styles.buttonPrimary} ds-label-large ds-focus-ring`}
+                  onClick={goToDashboard}
+                >
+                  Continue
+                </button>
+                <button
+                  type="button"
+                  className={`${styles.buttonLink} ds-label-medium ds-focus-ring`}
+                  onClick={goPreviousStep}
+                >
+                  Back
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      </main>
+    </div>
+  );
+}
+
+function ShieldIcon() {
+  return (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M12 3l7 3v5c0 4.5-3 8-7 9-4-1-7-4.5-7-9V6l7-3z"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M9 12l2 2 4-4"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}

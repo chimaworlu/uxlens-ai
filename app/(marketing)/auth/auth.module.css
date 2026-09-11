@@ -1,0 +1,619 @@
+.page {
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--color-roles-surface-container-low);
+}
+
+.logoLink {
+  align-self: center;
+  padding: var(--ds-spacing-xs) var(--ds-spacing-sm);
+  border-radius: var(--ds-radius-small);
+  color: var(--color-roles-primary);
+  transition: opacity 0.15s ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .logoLink:hover {
+    opacity: 0.75;
+  }
+}
+
+/* ---------- layout ---------- */
+.main {
+  flex: 1;
+  /* min-height: 0 is required for a flex:1 child to be allowed to shrink
+     below its content size — without it, overflow-y below has nothing to
+     act on and the card can push past the viewport uncontrolled. */
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--ds-spacing-xl);
+  /* Safety net, not the primary mechanism: the card is sized to fit a
+     normal viewport without this ever triggering. Only engages on a
+     genuinely short screen, and only scrolls the card area — never hides
+     content the way the page-level overflow:hidden this replaced did. */
+  overflow-y: auto;
+}
+
+/* Logo + card as one block: .main centers this single unit, so the logo
+   can never drift away from the card the way it could when they were two
+   independently-centered flex children. */
+.cardGroup {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--ds-spacing-md);
+  width: 100%;
+  max-width: 400px;
+}
+
+@media (max-width: 720px) {
+  .main {
+    justify-content: center;
+    padding: var(--ds-spacing-md);
+  }
+
+  .card {
+    max-width: 100%;
+    padding: var(--ds-spacing-lg);
+  }
+
+  .passwordRequirement {
+    align-items: flex-start;
+  }
+
+  .forgotLink {
+    align-self: flex-start;
+  }
+}
+
+@media (max-width: 420px) {
+  .card {
+    padding: var(--ds-spacing-md);
+    gap: var(--ds-spacing-sm);
+  }
+
+  .field input,
+  .googleButton,
+  .buttonPrimary {
+    padding-left: var(--ds-spacing-md);
+    padding-right: var(--ds-spacing-md);
+  }
+
+  .field .codeInput {
+    font-size: 1.375rem;
+    letter-spacing: 0.35em;
+    padding-right: calc(var(--ds-spacing-md) + 0.35em);
+  }
+
+  .otpBox {
+    max-width: 40px;
+    font-size: 1.1rem;
+  }
+}
+
+@media (max-height: 760px) {
+  .main {
+    justify-content: center;
+    padding-top: var(--ds-spacing-lg);
+    padding-bottom: var(--ds-spacing-lg);
+  }
+}
+
+.card {
+  width: 100%;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-spacing-md);
+  background-color: var(--color-roles-surface-container-lowest);
+  border-radius: var(--ds-radius-large);
+  box-shadow: var(--effect-button-shadow-soft);
+  padding: var(--ds-spacing-xl);
+}
+
+.heading {
+  text-align: center;
+  color: var(--color-roles-on-surface);
+}
+
+.subtitle {
+  text-align: center;
+  color: var(--color-roles-on-surface-variant);
+  margin-top: var(--ds-spacing-sm);
+}
+
+.modeLabel {
+  text-align: center;
+  color: var(--color-roles-primary);
+  margin-top: var(--ds-spacing-xs);
+}
+
+.helperText {
+  color: var(--color-roles-on-surface-variant);
+}
+
+/* ---------- google button ---------- */
+.googleButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ds-spacing-sm);
+  width: 100%;
+  cursor: pointer;
+  font-weight: 400;
+  background-color: var(--color-roles-surface-container-lowest);
+  color: var(--color-roles-on-surface);
+  border: var(--ds-hairline-border);
+  border-radius: var(--ds-radius-medium);
+  padding: var(--ds-spacing-sm) var(--ds-spacing-lg);
+  transition: background-color 0.15s ease;
+}
+
+.googleButton:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .googleButton:hover {
+    background-color: var(--color-roles-surface-container-low);
+  }
+}
+
+/* ---------- divider ---------- */
+.divider {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-spacing-md);
+  color: var(--color-roles-on-surface-variant);
+}
+
+.divider::before,
+.divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background-color: var(--color-roles-surface-variant);
+}
+
+/* ---------- form fields ---------- */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-spacing-md);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-spacing-xs);
+}
+
+.field label {
+  color: var(--color-roles-on-surface);
+}
+
+/* Only used where TextField gets a labelAction (currently just the sign-up
+   email field's "Verify email" link) — every other field keeps the plain
+   bare <label> above, unchanged. */
+.labelRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--ds-spacing-sm);
+}
+
+.verifyLink {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: var(--color-roles-primary);
+}
+
+.verifyLink:disabled {
+  color: var(--color-roles-on-surface-variant);
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.verifiedBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--color-roles-success);
+}
+
+.field input {
+  font: inherit;
+  width: 100%;
+  color: var(--color-roles-on-surface);
+  background-color: var(--color-roles-surface-container-low);
+  border: var(--ds-hairline-border);
+  border-radius: var(--ds-radius-small);
+  padding: var(--ds-spacing-sm) var(--ds-spacing-md);
+}
+
+.field input[aria-invalid="true"] {
+  border-color: var(--color-roles-error);
+}
+
+/* .field .codeInput, not just .codeInput — .field input's own border/
+   radius/padding (above) is one class + one element selector, which beats
+   a bare single-class selector on specificity regardless of source order,
+   so overriding those properties here needs the extra .field ancestor
+   class to actually win. */
+.field .codeInput {
+  font-size: 1.75rem;
+  font-weight: 600;
+  text-align: center;
+  color: var(--color-roles-on-surface);
+  background-color: var(--color-roles-surface-container-lowest);
+  border-width: 1.5px;
+  border-radius: var(--ds-radius-medium);
+  padding-top: var(--ds-spacing-md);
+  padding-bottom: var(--ds-spacing-md);
+  /* Centered numeric text with wide tracking reads as off-center — the
+     letter-spacing gap trails the last character, visually pushing the
+     whole code left. Padding the right side by roughly one gap's width
+     compensates without touching text-align itself. */
+  letter-spacing: 0.5em;
+  padding-right: calc(var(--ds-spacing-md) + 0.5em);
+  transition: border-color 0.15s ease;
+}
+
+.field .codeInput:focus {
+  border-color: var(--color-roles-primary);
+}
+
+.errorText {
+  color: var(--color-roles-error);
+}
+
+/* Informational, not alarming: it's normal to still have unmet
+   requirements while mid-typing a password, so this uses the neutral
+   on-surface-variant tone rather than the error color used above. */
+.passwordRequirements {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-spacing-xs);
+  margin: 0;
+  padding-left: 0;
+  color: var(--color-roles-on-surface-variant);
+}
+
+.passwordRequirement {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-spacing-xs);
+}
+
+.passwordRequirementIcon {
+  display: inline-flex;
+  width: 1rem;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.passwordRequirementMet {
+  color: #2e7d32;
+}
+
+.passwordRequirementUnmet {
+  color: var(--color-roles-error);
+}
+
+.passwordRequirementIconMet {
+  color: #2e7d32;
+}
+
+.passwordRequirementIconUnmet {
+  color: var(--color-roles-error);
+}
+
+.passwordInputWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.passwordInputWrap input {
+  padding-right: calc(var(--ds-spacing-xxl) + var(--ds-spacing-xs));
+}
+
+.passwordToggle {
+  position: absolute;
+  right: var(--ds-spacing-sm);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--ds-radius-small);
+  padding: var(--ds-spacing-xs);
+  cursor: pointer;
+  color: var(--color-roles-on-surface-variant);
+}
+
+.forgotLink {
+  align-self: flex-end;
+  margin-top: calc(-1 * var(--ds-spacing-sm));
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: var(--color-roles-primary);
+}
+
+/* ---------- buttons ---------- */
+.buttonPrimary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  border: 1px solid transparent;
+  cursor: pointer;
+  font-weight: 400;
+  background-color: var(--color-roles-primary);
+  color: var(--color-roles-on-primary);
+  border-radius: var(--ds-radius-medium);
+  padding: var(--ds-spacing-sm) var(--ds-spacing-lg);
+  transition: filter 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+}
+
+.buttonPrimary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .buttonPrimary:hover:not(:disabled) {
+    filter: brightness(0.92);
+    box-shadow: var(--effect-button-shadow-soft);
+  }
+}
+
+.footerText {
+  text-align: center;
+  color: var(--color-roles-on-surface-variant);
+}
+
+.footerLink {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: var(--color-roles-primary);
+}
+
+/* ---------- pre-signup "Verify email" modal ----------
+   .modal itself is skipped on purpose: .card (above) already has the exact
+   same recipe (width/max-width, flex column, surface-container-lowest,
+   radius-large, soft shadow, xl padding) as dashboard.module.css's .modal,
+   so the OTP dialog just reuses .card directly instead of a duplicate
+   class with identical values. */
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgb(0 0 0 / 0.4);
+  padding: var(--ds-spacing-lg);
+  z-index: 30;
+}
+
+.modalCentered {
+  position: relative;
+  align-items: center;
+  text-align: center;
+}
+
+.dialogIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--ds-radius-full);
+}
+
+.dialogIconInfo {
+  background-color: var(--color-roles-primary-container);
+  color: var(--color-roles-on-primary-container);
+}
+
+/* Left-aligned, unlike .subtitle above (which hardcodes text-align:
+   center for the app's other, centered cards) — the enter-verification-
+   code phase reads left-to-right like the rest of the modal, only the
+   success phase (which uses .subtitle) is centered. */
+.modalBodyText {
+  margin: 0;
+  color: var(--color-roles-on-surface-variant);
+}
+
+.buttonSecondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: var(--ds-hairline-border);
+  cursor: pointer;
+  font-weight: 400;
+  background-color: transparent;
+  color: var(--color-roles-on-surface);
+  border-radius: var(--ds-radius-medium);
+  padding: var(--ds-spacing-sm) var(--ds-spacing-lg);
+  transition: background-color 0.15s ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .buttonSecondary:hover {
+    background-color: var(--color-roles-surface-container-low);
+  }
+}
+
+/* Sized to their own content, not stretched — .buttonPrimary's global
+   width: 100% (meant for the full-width form submit buttons elsewhere in
+   this file) is overridden here so Cancel/Verify sit side by side at their
+   natural width instead of each stretching to fill the row. */
+.otpActions {
+  display: flex;
+  gap: var(--ds-spacing-sm);
+}
+
+.otpActions .buttonPrimary,
+.otpActions .buttonSecondary {
+  width: auto;
+}
+
+/* Six individual boxes, not one wide letter-spaced field (see the OtpInput
+   component) — reused as-is from the account-deletion confirmation flow's
+   own OTP entry (app/(app)/projects/dashboard.module.css), the app's one
+   existing OTP pattern. */
+.otpInput {
+  display: flex;
+  gap: var(--ds-spacing-xs);
+}
+
+.otpBox {
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 48px;
+  aspect-ratio: 1 / 1;
+  text-align: center;
+  font: inherit;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--color-roles-on-surface);
+  background-color: var(--color-roles-surface-container-lowest);
+  border: var(--ds-hairline-border);
+  border-radius: var(--ds-radius-medium);
+  padding: 0;
+}
+
+.otpBox:focus {
+  border-color: var(--color-roles-primary);
+}
+
+.resendRow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ds-spacing-xs);
+  color: var(--color-roles-on-surface-variant);
+}
+
+/* ---------- snackbar (reused verbatim from dashboard.module.css) ---------- */
+.snackbar {
+  position: fixed;
+  left: 50%;
+  top: var(--ds-spacing-lg);
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-spacing-md);
+  max-width: min(92vw, 420px);
+  padding: var(--ds-spacing-md) var(--ds-spacing-lg);
+  border-radius: var(--ds-radius-medium);
+  background-color: var(--color-roles-success-container);
+  color: var(--color-roles-on-success-container);
+  box-shadow: var(--effect-button-shadow-soft);
+  z-index: 40;
+}
+
+.snackbarMessage {
+  flex: 1;
+}
+
+.snackbarClose {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--ds-radius-small);
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+.resendLink {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: var(--color-roles-primary);
+}
+
+.resendLink:disabled {
+  color: var(--color-roles-on-surface-variant);
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Solid --color-roles-success/on-success (our own vivid green pair), not
+   the softer -container tint used for badges/chips elsewhere — this is
+   the sole focal illustration on the success screen, no envelope beside
+   it anymore, so it reads more like a real confirmation stamp than a
+   quiet accent. */
+.verifiedIllustration {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 80px;
+  height: 80px;
+  border-radius: var(--ds-radius-full);
+  background-color: var(--color-roles-success);
+  color: var(--color-roles-on-success);
+  animation: verifiedPopIn 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes verifiedPopIn {
+  0% {
+    transform: scale(0.5);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.08);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes verifiedDraw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* Draws itself in via stroke-dasharray/dashoffset (a plain CSS technique,
+   the same one most "verified" checkmark Lottie animations actually use
+   under the hood) — delayed slightly so the circle's pop-in settles first,
+   then the check strokes in. Dasharray is the path's approximate length
+   (two segments, 4,4 then 8,-9 ⇒ √32 + √145 ≈ 17.7, rounded up to 19 for a
+   small margin). */
+.verifiedBadgeCheck {
+  stroke-dasharray: 19;
+  stroke-dashoffset: 19;
+  animation: verifiedDraw 0.3s ease-out 0.25s forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .verifiedIllustration,
+  .verifiedBadgeCheck {
+    animation: none;
+  }
+
+  .verifiedBadgeCheck {
+    stroke-dashoffset: 0;
+  }
+}

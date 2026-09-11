@@ -1,0 +1,626 @@
+.page {
+  /* dvh, not vh: on a mobile browser, 100vh is measured against the
+     largest possible viewport (address bar collapsed), taller than what's
+     actually on screen when the bar is showing — which pushes anything
+     centered below it lower than true visual center. dvh tracks the real,
+     current viewport instead. */
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--color-roles-surface);
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--ds-spacing-base) var(--ds-spacing-xxl);
+  background-color: var(--color-roles-surface);
+}
+
+@media (max-width: 720px) {
+  .nav {
+    padding: var(--ds-spacing-base) var(--ds-spacing-lg);
+    gap: var(--ds-spacing-sm);
+  }
+
+  .main {
+    padding: var(--ds-spacing-lg);
+  }
+
+  .content {
+    gap: var(--ds-spacing-lg);
+  }
+
+  .titleRow {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .titleRow .buttonPrimary {
+    width: 100%;
+  }
+
+  .modalOverlay {
+    padding: var(--ds-spacing-md);
+    align-items: flex-end;
+  }
+
+  .modal {
+    max-width: 100%;
+    padding: var(--ds-spacing-lg);
+  }
+
+  .modalActions {
+    flex-direction: column;
+  }
+
+  .modalActions .buttonPrimary,
+  .modalActions .buttonSecondary {
+    width: 100%;
+  }
+}
+
+@media (max-width: 420px) {
+  .main {
+    padding: var(--ds-spacing-md);
+  }
+
+  .nav {
+    padding: var(--ds-spacing-base) var(--ds-spacing-md);
+  }
+
+  .content {
+    gap: var(--ds-spacing-md);
+  }
+
+  .content,
+  .main,
+  .nav {
+    min-width: 0;
+  }
+
+  .emptyState {
+    padding: var(--ds-spacing-xl) var(--ds-spacing-md);
+  }
+}
+
+@media (max-height: 760px) {
+  .main {
+    padding-top: var(--ds-spacing-lg);
+    padding-bottom: var(--ds-spacing-lg);
+  }
+}
+
+.brand {
+  color: var(--color-roles-primary);
+}
+
+.avatar {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background-color: var(--color-roles-primary-container);
+  color: var(--color-roles-on-primary-container);
+}
+
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--ds-spacing-xl);
+  padding: var(--ds-spacing-xxl);
+}
+
+.content {
+  /* flex: 1, not just natural content height: the title row needs to stay
+     pinned at the top while the empty state (below) centers itself in
+     whatever space is left — that only works if .content actually fills
+     .main's full height for there to be leftover space to center within.
+     min-height: 0 is the usual flex:1-inside-flex:1 companion, letting
+     this shrink instead of overflowing on a short viewport. */
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  max-width: 880px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-spacing-xl);
+}
+
+.heading {
+  color: var(--color-roles-on-surface);
+}
+
+.titleRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--ds-spacing-lg);
+}
+
+.quotaText {
+  margin-top: var(--ds-spacing-xs);
+  color: var(--color-roles-on-surface-variant);
+}
+
+.buttonPrimary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ds-spacing-xs);
+  border: 1px solid transparent;
+  cursor: pointer;
+  font-weight: 400;
+  background-color: var(--color-roles-primary);
+  color: var(--color-roles-on-primary);
+  border-radius: var(--ds-radius-medium);
+  padding: var(--ds-spacing-sm) var(--ds-spacing-lg);
+  transition: filter 0.15s ease;
+}
+
+.buttonPrimary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .buttonPrimary:hover:not(:disabled) {
+    filter: brightness(0.92);
+  }
+}
+
+.resendLink {
+  align-self: center;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: var(--color-roles-primary);
+  text-decoration: underline;
+}
+
+.errorText {
+  color: var(--color-roles-error);
+}
+
+.successBanner {
+  background-color: var(--color-roles-success-container);
+  color: var(--color-roles-on-success-container);
+  border-radius: var(--ds-radius-medium);
+  padding: var(--ds-spacing-lg);
+}
+
+.snackbar {
+  position: fixed;
+  left: 50%;
+  top: var(--ds-spacing-lg);
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-spacing-md);
+  max-width: min(92vw, 420px);
+  padding: var(--ds-spacing-md) var(--ds-spacing-lg);
+  border-radius: var(--ds-radius-medium);
+  background-color: var(--color-roles-success-container);
+  color: var(--color-roles-on-success-container);
+  box-shadow: var(--effect-button-shadow-soft);
+  z-index: 20;
+}
+
+.snackbarMessage {
+  flex: 1;
+}
+
+.snackbarClose {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--ds-radius-small);
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+.emptyState {
+  /* Centers itself in whatever vertical space .contentBody has —
+     margin: auto on a flex item absorbs all available free space evenly
+     above and below it, rather than the block sitting flush under the
+     title. */
+  margin-top: auto;
+  margin-bottom: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--ds-spacing-sm);
+  color: var(--color-roles-on-surface-variant);
+  padding: var(--ds-spacing-xxl) var(--ds-spacing-xl);
+  text-align: center;
+}
+
+.emptyStateIcon {
+  color: var(--color-roles-on-surface-variant);
+  margin-bottom: var(--ds-spacing-sm);
+}
+
+.emptyState h2 {
+  color: var(--color-roles-on-surface);
+  margin: 0;
+}
+
+.emptyState p {
+  max-width: 440px;
+  margin: 0;
+}
+
+.emptyState .buttonPrimary {
+  margin-top: var(--ds-spacing-sm);
+}
+
+.buttonSecondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: var(--ds-hairline-border);
+  cursor: pointer;
+  font-weight: 400;
+  background-color: transparent;
+  color: var(--color-roles-on-surface);
+  border-radius: var(--ds-radius-medium);
+  padding: var(--ds-spacing-sm) var(--ds-spacing-lg);
+  transition: background-color 0.15s ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .buttonSecondary:hover {
+    background-color: var(--color-roles-surface-container-low);
+  }
+}
+
+/* ---------- create project modal ---------- */
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgb(0 0 0 / 0.4);
+  padding: var(--ds-spacing-lg);
+  z-index: 10;
+}
+
+.modal {
+  width: 100%;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-spacing-md);
+  background-color: var(--color-roles-surface-container-lowest);
+  border-radius: var(--ds-radius-large);
+  box-shadow: var(--effect-button-shadow-soft);
+  padding: var(--ds-spacing-xl);
+}
+
+.modalForm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-spacing-md);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-spacing-xs);
+}
+
+.field input {
+  font: inherit;
+  width: 100%;
+  color: var(--color-roles-on-surface);
+  background-color: var(--color-roles-surface-container-low);
+  border: var(--ds-hairline-border);
+  border-radius: var(--ds-radius-small);
+  padding: var(--ds-spacing-sm) var(--ds-spacing-md);
+}
+
+.modalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--ds-spacing-sm);
+}
+
+/* ---------- nav actions ---------- */
+.avatarLink {
+  display: inline-flex;
+  border-radius: 50%;
+  text-decoration: none;
+}
+
+/* ---------- project card grid ---------- */
+.projectGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--ds-spacing-lg);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.projectCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-spacing-sm);
+  background-color: var(--color-roles-surface-container-lowest);
+  border: var(--ds-hairline-border);
+  border-radius: var(--ds-radius-medium);
+  padding: var(--ds-spacing-lg);
+}
+
+/* Wraps everything except the header row (badge + kebab menu) so the card
+   opens the project on click without nesting the kebab's interactive
+   button/menu inside an anchor. */
+.cardLink {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-spacing-sm);
+  color: inherit;
+  text-decoration: none;
+}
+
+.cardHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--ds-spacing-sm);
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-spacing-xs);
+  border-radius: var(--ds-radius-full);
+  padding: 2px var(--ds-spacing-sm);
+}
+
+.badgeReady {
+  background-color: var(--color-roles-success-container);
+  color: var(--color-roles-on-success-container);
+}
+
+.badgeProcessing {
+  background-color: var(--color-roles-tertiary-container);
+  color: var(--color-roles-on-tertiary-container);
+}
+
+.badgeFailed {
+  background-color: var(--color-roles-error-container);
+  color: var(--color-roles-on-error-container);
+}
+
+.badgeReadOnly {
+  background-color: var(--color-roles-tertiary-container);
+  color: var(--color-roles-on-tertiary-container);
+}
+
+/* Holds the analysis-status badge and the FR-36 read-only badge side by
+   side — a project can be both at once (e.g. STALE and read-only). */
+.badgeGroup {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-spacing-xs);
+  flex-wrap: wrap;
+}
+
+.kebabWrap {
+  position: relative;
+}
+
+.kebabButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--ds-radius-small);
+  padding: 0;
+  cursor: pointer;
+  color: var(--color-roles-on-surface-variant);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .kebabButton:hover {
+    color: var(--color-roles-on-surface);
+    background-color: var(--color-roles-surface-container-low);
+  }
+}
+
+.kebabMenu {
+  position: absolute;
+  top: calc(100% + var(--ds-spacing-xs));
+  right: 0;
+  min-width: 160px;
+  background-color: var(--color-roles-surface-container-lowest);
+  border: var(--ds-hairline-border);
+  border-radius: var(--ds-radius-small);
+  box-shadow: var(--effect-button-shadow-soft);
+  padding: var(--ds-spacing-xs);
+  z-index: 5;
+}
+
+.kebabMenuItem {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--color-roles-error);
+  border-radius: var(--ds-radius-small);
+  padding: var(--ds-spacing-sm);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .kebabMenuItem:hover {
+    background-color: var(--color-roles-error-container);
+  }
+}
+
+.projectName {
+  margin: 0;
+  color: var(--color-roles-on-surface);
+}
+
+.projectSubtext {
+  margin: 0;
+  color: var(--color-roles-on-surface-variant);
+}
+
+.cardDivider {
+  height: 1px;
+  background-color: var(--color-roles-surface-variant);
+  margin: var(--ds-spacing-xs) 0;
+}
+
+.cardFooter {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-spacing-xs);
+  color: var(--color-roles-on-surface-variant);
+}
+
+/* ---------- danger / cap-reached dialogs ---------- */
+.dialogIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--ds-radius-full);
+}
+
+.dialogIconDanger {
+  background-color: var(--color-roles-error-container);
+  color: var(--color-roles-on-error-container);
+}
+
+.dialogIconWarning {
+  background-color: var(--color-roles-tertiary-container);
+  color: var(--color-roles-on-tertiary-container);
+}
+
+.dialogIconPrimary {
+  background-color: var(--color-roles-primary-container);
+  color: var(--color-roles-on-primary-container);
+}
+
+/* ---------- upgrade-to-pro feature list ---------- */
+.featureList {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-spacing-sm);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  text-align: left;
+}
+
+.featureItem {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-spacing-sm);
+  color: var(--color-roles-on-surface);
+}
+
+.featureItem svg {
+  flex-shrink: 0;
+  color: var(--color-roles-primary);
+}
+
+/* Pinned to the modal's corner independently of the icon below — the icon
+   centers itself via .modalCentered's align-items: center, and this stays
+   anchored top-right regardless, matching the mockup (the two are never
+   laid out relative to each other). */
+.dialogCloseButton {
+  position: absolute;
+  top: var(--ds-spacing-lg);
+  right: var(--ds-spacing-lg);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--ds-radius-small);
+  padding: 0;
+  cursor: pointer;
+  color: var(--color-roles-on-surface-variant);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .dialogCloseButton:hover {
+    color: var(--color-roles-on-surface);
+  }
+}
+
+/* Centers heading/body copy and stretches the field + action buttons full
+   width, matching the delete-confirmation and project-cap-reached mockups
+   (both distinct from the left-aligned create-project modal). */
+.modalCentered {
+  position: relative;
+  align-items: center;
+  text-align: center;
+}
+
+.modalCentered .field {
+  width: 100%;
+  align-items: center;
+}
+
+.modalBodyText {
+  margin: 0;
+  color: var(--color-roles-on-surface-variant);
+}
+
+.modalCentered .buttonPrimary,
+.modalCentered .buttonSecondary,
+.modalCentered .buttonDanger {
+  width: 100%;
+}
+
+.buttonDanger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  cursor: pointer;
+  font-weight: 400;
+  background-color: var(--color-roles-error-container);
+  color: var(--color-roles-on-error-container);
+  border-radius: var(--ds-radius-medium);
+  padding: var(--ds-spacing-sm) var(--ds-spacing-lg);
+  transition: filter 0.15s ease;
+}
+
+.buttonDanger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .buttonDanger:hover:not(:disabled) {
+    filter: brightness(0.95);
+  }
+}
