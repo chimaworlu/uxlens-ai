@@ -448,6 +448,14 @@
   min-height: 96px;
 }
 
+.errorText {
+  color: var(--color-roles-error);
+}
+
+.successText {
+  color: var(--color-roles-success);
+}
+
 /* ---------- footer ---------- */
 .footer {
   border-top: var(--ds-hairline-border);

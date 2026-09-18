@@ -103,6 +103,38 @@ The UXLens AI Team`;
   });
 }
 
+// Marketing site's contact form (previously a no-op placeholder). Sent to
+// the operator's own inbox, not the submitter — replyTo is set to the
+// submitter's address so replying from a normal email client goes straight
+// back to them, no separate "reply-to this instead" step.
+export async function sendContactEmail(name: string, email: string, message: string): Promise<void> {
+  await sendMailWithFallback({
+    from: `UXLens AI Contact Form <${FROM_EMAIL}>`,
+    to: FROM_EMAIL,
+    replyTo: email,
+    subject: `New contact form message from ${name}`,
+    text: `From: ${name} <${email}>\n\n${message}`,
+    html: `
+      <p><strong>From:</strong> ${escapeHtml(name)} &lt;${escapeHtml(email)}&gt;</p>
+      <p style="white-space: pre-wrap;">${escapeHtml(message)}</p>
+    `,
+  });
+}
+
+// The only place this module renders untrusted, free-text user input into
+// HTML (every other email here interpolates values this app itself
+// generated — a code, a name pulled from the account's own signup). Without
+// this, a contact-form message containing HTML would render live in
+// whatever mail client opens it.
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 export async function sendPasswordResetEmail(to: string, code: string): Promise<void> {
   await sendMailWithFallback({
     from: `UXLens AI <${FROM_EMAIL}>`,

@@ -45,6 +45,22 @@ export default function AuthPage() {
   );
 }
 
+// Auth.js sends every OAuth failure back to this page as ?error=<code>
+// (auth.config.ts's pages.signIn: "/auth" makes this page double as the
+// error landing page too, not just a separate error route). Mapped to a
+// plain-language message here since Auth.js's own codes are meant for
+// developers, not end users.
+function getOAuthErrorMessage(code: string | null): string | null {
+  if (!code) return null;
+  if (code === "GoogleLinkNeedsVerifiedEmail") {
+    return "Sign in with your password first and verify your email — after that, Sign in with Google will work for this account too.";
+  }
+  if (code === "OAuthAccountNotLinked") {
+    return "An account with this email already exists. Sign in with your password instead.";
+  }
+  return "We could not sign you in with Google. Please try again.";
+}
+
 function AuthPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -58,10 +74,26 @@ function AuthPageContent() {
   // which way the user navigates between them.
   const [email, setEmail] = useState("");
   const [resetCode, setResetCode] = useState("");
+  const [oauthError, setOauthError] = useState<string | null>(null);
 
   useEffect(() => {
     document.title = TITLE_COPY[view];
   }, [view]);
+
+  // Captured once on mount, then stripped from the URL — same pattern as
+  // the billing ?reference= handling on the projects dashboard — so a
+  // refresh doesn't keep re-showing a stale error after the user's already
+  // seen it. Reads window.location.search directly rather than the
+  // searchParams hook for the same reason that handler does: this only
+  // ever needs the value the redirect landed with, not anything that
+  // changes during the page's lifetime.
+  useEffect(() => {
+    const message = getOAuthErrorMessage(new URLSearchParams(window.location.search).get("error"));
+    if (!message) return;
+    setOauthError(message);
+    router.replace("/auth", { scroll: false });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function handleSignUpSuccess() {
     // No blocking verify-pending screen (FR-2: verification doesn't gate
@@ -90,6 +122,7 @@ function AuthPageContent() {
               onEmailChange={setEmail}
               onSwitchToSignUp={() => setView("sign-up")}
               onForgotPassword={() => setView("reset-request")}
+              oauthError={oauthError}
             />
           )}
           {view === "sign-up" && (
@@ -134,11 +167,13 @@ function SignInCard({
   onEmailChange,
   onSwitchToSignUp,
   onForgotPassword,
+  oauthError,
 }: {
   email: string;
   onEmailChange: (value: string) => void;
   onSwitchToSignUp: () => void;
   onForgotPassword: () => void;
+  oauthError: string | null;
 }) {
   const router = useRouter();
   const [password, setPassword] = useState("");
@@ -184,6 +219,11 @@ function SignInCard({
       </div>
 
       <GoogleButton />
+      {oauthError && (
+        <span className={`${styles.errorText} ds-label-medium`} role="alert" aria-live="polite">
+          {oauthError}
+        </span>
+      )}
       <Divider />
 
       <form className={styles.form} onSubmit={handleSubmit}>
