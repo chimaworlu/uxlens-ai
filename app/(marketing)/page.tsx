@@ -146,11 +146,11 @@ export default function MarketingPage() {
           </div>
 
           <Link
-            href="/auth?view=sign-up"
-            className={`${styles.buttonPrimary} ds-label-large ds-focus-ring`}
+            href="/auth"
+            className={`${styles.buttonOutlined} ds-label-large ds-focus-ring`}
             onClick={() => setMobileMenuOpen(false)}
           >
-            Sign up free
+            Sign in
           </Link>
         </div>
       </nav>
