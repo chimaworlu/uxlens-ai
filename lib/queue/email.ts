@@ -6,7 +6,8 @@ export const EMAIL_QUEUE_NAME = "email";
 export type EmailJob =
   | { type: "verification"; to: string; code: string }
   | { type: "password-reset"; to: string; code: string }
-  | { type: "welcome"; to: string; name: string };
+  | { type: "welcome"; to: string; name: string }
+  | { type: "contact"; name: string; email: string; message: string };
 
 // Producer side, used by API routes. AGENTS.md: BullMQ consumers only ever
 // run in the separate worker process (worker/queues/email.ts) — this file
@@ -39,4 +40,9 @@ export async function enqueuePasswordResetEmail(to: string, code: string): Promi
 export async function enqueueWelcomeEmail(to: string, name: string): Promise<void> {
   const job: EmailJob = { type: "welcome", to, name };
   await emailQueue.add("send-welcome-email", job);
+}
+
+export async function enqueueContactEmail(name: string, email: string, message: string): Promise<void> {
+  const job: EmailJob = { type: "contact", name, email, message };
+  await emailQueue.add("send-contact-email", job);
 }

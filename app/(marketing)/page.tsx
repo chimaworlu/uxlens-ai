@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type SubmitEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { validateEmail, validateFullName } from "@/lib/validation/auth";
+import { validateContactMessage } from "@/lib/validation/contact";
 import styles from "./page.module.css";
 
 type Section = "home" | "testimonial" | "contact";
@@ -144,11 +146,11 @@ export default function MarketingPage() {
           </div>
 
           <Link
-            href="/auth?view=sign-up"
-            className={`${styles.buttonPrimary} ds-label-large ds-focus-ring`}
+            href="/auth"
+            className={`${styles.buttonOutlined} ds-label-large ds-focus-ring`}
             onClick={() => setMobileMenuOpen(false)}
           >
-            Sign up free
+            Sign in
           </Link>
         </div>
       </nav>
@@ -237,7 +239,83 @@ function TestimonialSection() {
   );
 }
 
+// Same shape as the sign-up form's inline field errors (auth/page.tsx's
+// TextField): a format error runs live, the moment there's something to
+// check; "cannot be empty" only shows once the field's been touched or a
+// submit was attempted, so an untouched, empty field starts silent.
+function getFieldError(
+  value: string,
+  showEmptyError: boolean,
+  label: string,
+  validate: (value: string) => string | null
+): string | null {
+  const isEmpty = value.trim() === "";
+  if (isEmpty) {
+    return showEmptyError ? `${label} Field Cannot Be Empty` : null;
+  }
+  return validate(value);
+}
+
 function ContactSection() {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [message, setMessage] = useState("");
+  const [nameTouched, setNameTouched] = useState(false);
+  const [emailTouched, setEmailTouched] = useState(false);
+  const [messageTouched, setMessageTouched] = useState(false);
+  const [submitAttempted, setSubmitAttempted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submitted, setSubmitted] = useState(false);
+
+  // Same shape as the sign-up form's TextField (app/(marketing)/auth/page.tsx):
+  // an empty, untouched field stays silent, then shows "cannot be empty"
+  // once touched or a submit was attempted, and a format error (real-time,
+  // no touched gate) once something's actually typed.
+  const nameError = getFieldError(name, nameTouched || submitAttempted, "Name", validateFullName);
+  const emailError = getFieldError(email, emailTouched || submitAttempted, "Email", validateEmail);
+  const messageError = getFieldError(message, messageTouched || submitAttempted, "Message", validateContactMessage);
+  const isFormValid =
+    name.trim() !== "" &&
+    email.trim() !== "" &&
+    message.trim() !== "" &&
+    !validateFullName(name) &&
+    !validateEmail(email) &&
+    !validateContactMessage(message);
+
+  async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSubmitAttempted(true);
+    if (!isFormValid) return;
+
+    setSubmitting(true);
+    setSubmitError(null);
+    try {
+      const response = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, message }),
+      });
+      const data: { error?: string } = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setSubmitError(data.error ?? "Something went wrong. Please try again.");
+        return;
+      }
+      setSubmitted(true);
+      setName("");
+      setEmail("");
+      setMessage("");
+      setSubmitAttempted(false);
+      setNameTouched(false);
+      setEmailTouched(false);
+      setMessageTouched(false);
+    } catch {
+      setSubmitError("We could not send your message right now. Check your connection and try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
   return (
     <div className={styles.section}>
       <h2 className="ds-headline-large">Get in touch</h2>
@@ -245,49 +323,87 @@ function ContactSection() {
         Questions, feedback, or a bug to report? Send us a note.
       </p>
 
-      <form
-        className={styles.contactCard}
-        onSubmit={(event) => event.preventDefault()}
-      >
-        <div className={styles.field}>
-          <label htmlFor="contact-name" className="ds-label-large">
-            Your Name
-          </label>
-          <input
-            id="contact-name"
-            name="name"
-            type="text"
-            className="ds-focus-ring"
-          />
-        </div>
-        <div className={styles.field}>
-          <label htmlFor="contact-email" className="ds-label-large">
-            Work Email
-          </label>
-          <input
-            id="contact-email"
-            name="email"
-            type="email"
-            className="ds-focus-ring"
-          />
-        </div>
-        <div className={styles.field}>
-          <label htmlFor="contact-message" className="ds-label-large">
-            Message
-          </label>
-          <textarea
-            id="contact-message"
-            name="message"
-            className="ds-focus-ring"
-          />
-        </div>
-        <button
-          type="submit"
-          className={`${styles.buttonPrimary} ${styles.buttonFullWidth} ds-label-large ds-focus-ring`}
-        >
-          Submit request
-        </button>
-      </form>
+      {submitted ? (
+        <p className={`${styles.contactCard} ${styles.successText} ds-body-large`} role="status" aria-live="polite">
+          Thanks for reaching out. We&apos;ll get back to you soon.
+        </p>
+      ) : (
+        <form className={styles.contactCard} onSubmit={handleSubmit}>
+          <div className={styles.field}>
+            <label htmlFor="contact-name" className="ds-label-large">
+              Your Name
+            </label>
+            <input
+              id="contact-name"
+              name="name"
+              type="text"
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              onBlur={() => setNameTouched(true)}
+              aria-invalid={Boolean(nameError)}
+              className="ds-focus-ring"
+            />
+            {nameError && (
+              <span className={`${styles.errorText} ds-label-medium`} role="alert">
+                {nameError}
+              </span>
+            )}
+          </div>
+          <div className={styles.field}>
+            <label htmlFor="contact-email" className="ds-label-large">
+              Work Email
+            </label>
+            <input
+              id="contact-email"
+              name="email"
+              type="email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              onBlur={() => setEmailTouched(true)}
+              aria-invalid={Boolean(emailError)}
+              className="ds-focus-ring"
+            />
+            {emailError && (
+              <span className={`${styles.errorText} ds-label-medium`} role="alert">
+                {emailError}
+              </span>
+            )}
+          </div>
+          <div className={styles.field}>
+            <label htmlFor="contact-message" className="ds-label-large">
+              Message
+            </label>
+            <textarea
+              id="contact-message"
+              name="message"
+              value={message}
+              onChange={(event) => setMessage(event.target.value)}
+              onBlur={() => setMessageTouched(true)}
+              aria-invalid={Boolean(messageError)}
+              className="ds-focus-ring"
+            />
+            {messageError && (
+              <span className={`${styles.errorText} ds-label-medium`} role="alert">
+                {messageError}
+              </span>
+            )}
+          </div>
+
+          {submitError && (
+            <span className={`${styles.errorText} ds-label-medium`} role="alert" aria-live="polite">
+              {submitError}
+            </span>
+          )}
+
+          <button
+            type="submit"
+            disabled={!isFormValid || submitting}
+            className={`${styles.buttonPrimary} ${styles.buttonFullWidth} ds-label-large ds-focus-ring`}
+          >
+            {submitting ? "Sending…" : "Submit request"}
+          </button>
+        </form>
+      )}
     </div>
   );
 }

@@ -55,6 +55,46 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       }
     },
   },
+  callbacks: {
+    ...authConfig.callbacks,
+    // Google's allowDangerousEmailAccountLinking (below) skips Auth.js's
+    // own OAuthAccountNotLinked guard entirely, so this is the only check
+    // standing between "any Google sign-in with a matching email gets in"
+    // and a real account-takeover path: FR-2 lets a password account go on
+    // being used before its email is verified, so without this, someone
+    // could register a victim's email with a password they control and
+    // silently inherit it the moment the real owner tries Google sign-in.
+    // Requiring the existing account's email to already be verified closes
+    // that hole while still linking automatically for the normal case
+    // (an account that's actually been used and verified).
+    //
+    // Returning a URL string here (rather than throwing) is deliberate:
+    // Auth.js only forwards a fixed whitelist of error types to the client
+    // as-is (OAuthAccountNotLinked, AccessDenied, a handful of others) —
+    // anything else, including a thrown custom AuthError subclass,
+    // collapses into a generic "Configuration" error before it reaches
+    // app/(marketing)/auth/page.tsx. Returning a string instead redirects
+    // there directly, before any session or account link is created
+    // (@auth/core's callback handler returns immediately once this
+    // callback yields a string, never reaching the login/register step).
+    async signIn({ user, account }) {
+      if (account?.provider !== "google" || !user.email) return true;
+
+      const existing = await prisma.user.findUnique({
+        where: { email: user.email },
+        select: { emailVerified: true, accounts: { where: { provider: "google" }, select: { id: true } } },
+      });
+
+      // No existing account (brand-new email) or already linked to Google
+      // from a previous sign-in — nothing extra to check here.
+      if (!existing || existing.accounts.length > 0) return true;
+
+      if (!existing.emailVerified) {
+        return "/auth?error=GoogleLinkNeedsVerifiedEmail";
+      }
+      return true;
+    },
+  },
   providers: [
     Credentials({
       credentials: {
@@ -92,6 +132,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           Google({
             clientId: process.env.GOOGLE_CLIENT_ID,
             clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+            // Without this, Auth.js refuses to sign in via Google whenever
+            // the email already belongs to an unlinked account, full stop
+            // — the signIn callback above is what actually gates this
+            // safely (verified-email-only), so this alone would be the
+            // genuinely dangerous half of the pair.
+            allowDangerousEmailAccountLinking: true,
           }),
         ]
       : []),
