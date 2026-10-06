@@ -7,8 +7,9 @@ declare global {
 }
 
 function createPrismaClient() {
-  // max: 10 — explicit pool size per server instance, rather than relying
-  // on node-postgres's implicit default of the same value.
+  // DB_POOL_MAX: connections per running instance. Serverless (Vercel) runs
+  // many instances at once, so it should be 1 there; the long-running worker
+  // keeps the default of 10.
   //
   // keepAlive — local dev only, but load-bearing here: Docker Desktop's
   // WSL2 port-forwarding layer resets idle pooled connections to the
@@ -19,7 +20,7 @@ function createPrismaClient() {
   // reap them.
   const adapter = new PrismaPg({
     connectionString: process.env.DATABASE_URL,
-    max: 10,
+    max: Number(process.env.DB_POOL_MAX ?? 10),
     keepAlive: true,
     keepAliveInitialDelayMillis: 10_000,
   });
