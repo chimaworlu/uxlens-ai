@@ -76,3 +76,19 @@ scheduleChatMessagePruning().catch((err) => {
 });
 
 logger.info("Worker started, listening for jobs on queues: email, cleanup, doc-processing, analysis");
+
+// Hosts (Railway, Render, Fly) send SIGTERM on every redeploy. close() waits for
+// in-flight jobs to finish, so a long analysis run isn't cut off mid-pipeline.
+async function shutdown(signal: NodeJS.Signals) {
+  logger.info({ signal }, "Shutting down workers.");
+  await Promise.all([
+    emailWorker.close(),
+    cleanupWorker.close(),
+    docProcessingWorker.close(),
+    analysisWorker.close(),
+  ]);
+  process.exit(0);
+}
+
+process.on("SIGTERM", () => void shutdown("SIGTERM"));
+process.on("SIGINT", () => void shutdown("SIGINT"));
