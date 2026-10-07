@@ -3,7 +3,15 @@
 // Loads .env manually — Next.js does this automatically for its own
 // process, but a plain `node worker/index.ts` process does not.
 import "dotenv/config";
+import { setDefaultResultOrder } from "node:dns";
 import * as Sentry from "@sentry/node";
+
+// Some hosts (confirmed on Railway) advertise IPv6 but can't actually route
+// to it, so outbound connections to IPv6-first hosts (Gmail SMTP, Supabase's
+// direct Postgres connection) fail with ENETUNREACH. Preferring IPv4
+// resolution process-wide avoids that for every outbound connection this
+// worker makes, not just one of them.
+setDefaultResultOrder("ipv4first");
 import { logger } from "../lib/logger.ts";
 import { startEmailWorker } from "./queues/email.ts";
 import { startCleanupWorker } from "./queues/cleanup.ts";
