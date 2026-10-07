@@ -230,7 +230,8 @@
     gap: var(--ds-spacing-lg);
   }
 
-  .navMenuOpen .buttonPrimary {
+  .navMenuOpen .buttonPrimary,
+  .navMenuOpen .buttonOutlined {
     width: 100%;
     max-width: 320px;
   }
