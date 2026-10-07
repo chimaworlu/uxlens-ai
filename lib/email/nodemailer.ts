@@ -1,4 +1,5 @@
 import nodemailer, { type Transporter } from "nodemailer";
+import type SMTPTransport from "nodemailer/lib/smtp-transport";
 
 // Server-only. Lazily constructed for the same reason the old Resend client
 // was: building the transporter at import time would throw synchronously if
@@ -14,6 +15,14 @@ import nodemailer, { type Transporter } from "nodemailer";
 let startTlsTransporter: Transporter | undefined;
 let implicitTlsTransporter: Transporter | undefined;
 
+// `family: 4` forces IPv4 for the actual socket connection (nodemailer
+// forwards these options straight to node:net/node:tls connect() — it's a
+// real, honored option at runtime even though @types/nodemailer doesn't
+// declare it, hence the cast). Confirmed on Railway: its network resolves
+// smtp.gmail.com to an IPv6 address it has no route to, failing with
+// ENETUNREACH on every attempt — process-wide DNS-order preference alone
+// (worker/index.ts) wasn't enough to avoid it, so this pins the one
+// consistently-broken connection explicitly.
 function getTransporter(port: 587 | 465): Transporter {
   if (port === 587) {
     if (!startTlsTransporter) {
@@ -21,11 +30,12 @@ function getTransporter(port: 587 | 465): Transporter {
         host: "smtp.gmail.com",
         port: 587,
         secure: false,
+        family: 4,
         auth: {
           user: process.env.GMAIL_USER,
           pass: process.env.GMAIL_APP_PASSWORD,
         },
-      });
+      } as SMTPTransport.Options);
     }
     return startTlsTransporter;
   }
@@ -35,11 +45,12 @@ function getTransporter(port: 587 | 465): Transporter {
       host: "smtp.gmail.com",
       port: 465,
       secure: true,
+      family: 4,
       auth: {
         user: process.env.GMAIL_USER,
         pass: process.env.GMAIL_APP_PASSWORD,
       },
-    });
+    } as SMTPTransport.Options);
   }
   return implicitTlsTransporter;
 }
