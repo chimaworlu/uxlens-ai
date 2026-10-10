@@ -14,6 +14,7 @@ import {
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
+import { GOOGLE_INTENT_COOKIE, type GoogleIntent } from "@/lib/auth/google-intent";
 import {
   validateEmail,
   validateFullName,
@@ -57,6 +58,12 @@ function getOAuthErrorMessage(code: string | null): string | null {
   }
   if (code === "OAuthAccountNotLinked") {
     return "An account with this email already exists. Sign in with your password instead.";
+  }
+  if (code === "GoogleNoAccountFound") {
+    return "No account found for this Google email. Sign up first.";
+  }
+  if (code === "GoogleAccountExists") {
+    return "An account with this email already exists. Sign in instead.";
   }
   return "We could not sign you in with Google. Please try again.";
 }
@@ -218,7 +225,7 @@ function SignInCard({
         </p>
       </div>
 
-      <GoogleButton />
+      <GoogleButton intent="sign-in" />
       {oauthError && (
         <span className={`${styles.errorText} ds-label-medium`} role="alert" aria-live="polite">
           {oauthError}
@@ -404,7 +411,7 @@ function SignUpCard({
         </p>
       </div>
 
-      <GoogleButton />
+      <GoogleButton intent="sign-up" />
       <Divider />
 
       <form className={styles.form} onSubmit={handleSubmit}>
@@ -1208,12 +1215,20 @@ function getPasswordRequirements(value: string): { label: string; met: boolean }
 // confusing NextAuth "unsupported provider" error.
 const GOOGLE_SIGNIN_ENABLED = process.env.NEXT_PUBLIC_GOOGLE_SIGNIN_ENABLED === "true";
 
-function GoogleButton() {
+function GoogleButton({ intent }: { intent: GoogleIntent }) {
   const [starting, setStarting] = useState(false);
 
   async function handleClick() {
     setStarting(true);
     try {
+      // Google itself can't tell "Sign up" and "Sign in" apart — both
+      // buttons start the identical authorization request — so this
+      // cookie is how auth.ts's signIn callback learns which one was
+      // actually clicked (see lib/auth/google-intent.ts). Short-lived and
+      // read-once: only needs to survive the round trip to Google and
+      // back, not linger as real session state.
+      document.cookie = `${GOOGLE_INTENT_COOKIE}=${intent}; path=/; max-age=300; samesite=lax`;
+
       // No redirect: false here — unlike the Credentials provider, Google
       // sign-in is a real full-page navigation through Google's own
       // consent screen, not something this page waits on client-side. It
