@@ -54,6 +54,10 @@ export async function runAnalysis(analysisId: string): Promise<RunAnalysisResult
 
   const rankByType = new Map<InsightType, number>();
 
+  // Prisma's default interactive-transaction timeout (5s) can be too short
+  // for an analysis with many insights/citations written one by one over
+  // a pooled connection with real network latency (confirmed against
+  // Supabase) — 30s gives this room without masking a genuinely stuck query.
   await prisma.$transaction(async (tx) => {
     for (const insight of verified) {
       const rank = rankByType.get(insight.type) ?? 0;
@@ -98,7 +102,7 @@ export async function runAnalysis(analysisId: string): Promise<RunAnalysisResult
         progressStage: null,
       },
     });
-  });
+  }, { timeout: 30_000 });
 
   await pruneAnalysisVersions(analysis.projectId);
 

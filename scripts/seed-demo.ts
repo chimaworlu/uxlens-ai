@@ -15,6 +15,14 @@
 // imports with explicit .ts extensions, no "@/" alias, .env loaded
 // manually.
 import "dotenv/config";
+import { setDefaultResultOrder } from "node:dns";
+
+// Same fix as worker/index.ts: this script's R2 upload (fetch) can fail
+// with a generic "fetch failed" on networks that advertise IPv6 for
+// cloudflarestorage.com but can't actually route to it. Preferring IPv4
+// resolution avoids that, same as the worker.
+setDefaultResultOrder("ipv4first");
+
 import { prisma } from "../lib/db/prisma.ts";
 import { DEMO_USER_EMAIL, DEMO_PROJECT_NAME } from "../lib/demo.ts";
 import { buildDocumentKey, getPresignedUploadUrl } from "../lib/storage/r2.ts";
