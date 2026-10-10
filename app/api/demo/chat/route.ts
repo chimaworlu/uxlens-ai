@@ -8,7 +8,7 @@ import {
   DEMO_CHAT_SESSION_LIMIT,
   DEMO_CHAT_SESSION_WINDOW_SECONDS,
 } from "@/lib/demo-session";
-import { checkRateLimit } from "@/lib/security/rate-limit";
+import { checkRateLimit, releaseRateLimit } from "@/lib/security/rate-limit";
 import { buildChatContext } from "@/lib/pipeline/chat/retrieve";
 import { streamAnswer } from "@/lib/pipeline/chat/respond";
 import { extractCitations } from "@/lib/pipeline/chat/citations";
@@ -180,6 +180,7 @@ export async function POST(request: NextRequest) {
         send({ type: "done", messageId: assistantMessage.id, citations: citationChips });
       } catch (error) {
         logger.error({ event: "demo_chat_stream_error", err: (error as Error).message }, "Demo chat stream failed.");
+        await releaseRateLimit(`demo-chat-session:${sessionId}`).catch(() => {});
         send({ type: "error", message: "Something went wrong. Please try again." });
       } finally {
         try {
