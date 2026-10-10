@@ -17,3 +17,16 @@ export async function checkRateLimit(
   }
   return count <= limit;
 }
+
+// For a tightly-capped quota (e.g. the demo's 3-messages-per-session
+// cap), checkRateLimit's own increment happens before the attempt is
+// known to succeed. A caller that hits a genuine server-side failure
+// after that (not the visitor's fault) calls this to give the slot
+// back, so a transient error doesn't permanently cost them one of their
+// few allotted messages. Not called for an intentional refusal (FR-30's
+// "research doesn't cover this") — that's a real, correct answer, not a
+// failure, and should still count.
+export async function releaseRateLimit(key: string): Promise<void> {
+  const redis = getRedisConnection();
+  await redis.decr(`rate-limit:${key}`);
+}
