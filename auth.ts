@@ -2,10 +2,12 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
 import { PrismaAdapter } from "@auth/prisma-adapter";
+import { cookies } from "next/headers";
 import { prisma } from "@/lib/db/prisma";
 import { verifyPassword } from "@/lib/auth/password";
 import { enqueueWelcomeEmail } from "@/lib/queue/email";
 import { authConfig } from "./auth.config";
+import { GOOGLE_INTENT_COOKIE } from "@/lib/auth/google-intent";
 
 const isProduction = process.env.NODE_ENV === "production";
 const SESSION_MAX_AGE_SECONDS = 30 * 24 * 60 * 60; // 30 days
@@ -84,6 +86,20 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         where: { email: user.email },
         select: { emailVerified: true, accounts: { where: { provider: "google" }, select: { id: true } } },
       });
+
+      // Which button the visitor actually clicked — see google-intent.ts.
+      // Read-and-clear: a stale value from an abandoned earlier attempt
+      // should never silently apply to this one.
+      const cookieStore = await cookies();
+      const intent = cookieStore.get(GOOGLE_INTENT_COOKIE)?.value;
+      cookieStore.delete(GOOGLE_INTENT_COOKIE);
+
+      if (intent === "sign-in" && !existing) {
+        return "/auth?error=GoogleNoAccountFound";
+      }
+      if (intent === "sign-up" && existing) {
+        return "/auth?error=GoogleAccountExists";
+      }
 
       // No existing account (brand-new email) or already linked to Google
       // from a previous sign-in — nothing extra to check here.
