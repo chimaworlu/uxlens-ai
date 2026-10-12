@@ -145,6 +145,7 @@
   --color-roles-on-error: var(--primitives-error-color-palette-error100);
   --color-roles-error-container: var(--primitives-error-color-palette-error90);
   --color-roles-on-error-container: var(--primitives-error-color-palette-error30);
+  --color-roles-error-surface: var(--primitives-error-color-palette-error98);
   --color-roles-success: var(--primitives-success-color-palette-success40);
   --color-roles-on-success: var(--primitives-success-color-palette-success100);
   --color-roles-success-container: var(--primitives-success-color-palette-success90);
