@@ -165,7 +165,7 @@ export default function BillingPage() {
                     <button
                       type="button"
                       onClick={() => setConfirmingCancel(true)}
-                      className={`${styles.cancelLink} ds-label-large`}
+                      className={`${styles.buttonDanger} ds-label-large ds-focus-ring`}
                     >
                       Cancel subscription
                     </button>
@@ -189,7 +189,7 @@ export default function BillingPage() {
                           type="button"
                           onClick={handleCancel}
                           disabled={cancelling}
-                          className={`${styles.cancelLink} ds-label-large`}
+                          className={`${styles.buttonDangerSolid} ds-label-large ds-focus-ring`}
                         >
                           {cancelling ? "Cancelling…" : "Yes, cancel"}
                         </button>

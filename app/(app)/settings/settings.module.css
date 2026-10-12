@@ -157,6 +157,10 @@
   .heading {
     align-self: auto;
   }
+
+  .logOutButton {
+    width: 100%;
+  }
 }
 
 @media (max-width: 420px) {

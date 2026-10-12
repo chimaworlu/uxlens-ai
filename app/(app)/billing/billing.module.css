@@ -244,19 +244,29 @@
   display: flex;
 }
 
-.cancelLink {
-  background: none;
-  border: none;
-  padding: 0;
+.buttonDanger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
   cursor: pointer;
   font-weight: 400;
-  color: var(--color-roles-error);
-  text-decoration: underline;
+  background-color: var(--color-roles-error-container);
+  color: var(--color-roles-on-error-container);
+  border-radius: var(--ds-radius-medium);
+  padding: var(--ds-spacing-sm) var(--ds-spacing-lg);
+  transition: filter 0.15s ease;
 }
 
-.cancelLink:disabled {
+.buttonDanger:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .buttonDanger:hover:not(:disabled) {
+    filter: brightness(0.95);
+  }
 }
 
 .cancelConfirm {
@@ -264,8 +274,9 @@
   flex-direction: column;
   align-items: flex-start;
   gap: var(--ds-spacing-md);
-  background-color: var(--color-roles-error-container);
+  background-color: var(--color-roles-error-surface);
   color: var(--color-roles-on-error-container);
+  border: 1px solid var(--color-roles-error-container);
   border-radius: var(--ds-radius-large);
   padding: var(--ds-spacing-lg);
   width: 100%;
@@ -279,6 +290,34 @@
   display: flex;
   align-items: center;
   gap: var(--ds-spacing-lg);
+}
+
+/* Solid, not the container-tinted .buttonDanger above — that one reads
+   fine on the plain page background, but inside this already
+   error-container-colored card it would blend in and lose contrast. */
+.buttonDangerSolid {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  cursor: pointer;
+  font-weight: 400;
+  background-color: var(--color-roles-error);
+  color: var(--color-roles-on-error);
+  border-radius: var(--ds-radius-medium);
+  padding: var(--ds-spacing-sm) var(--ds-spacing-lg);
+  transition: filter 0.15s ease;
+}
+
+.buttonDangerSolid:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .buttonDangerSolid:hover:not(:disabled) {
+    filter: brightness(0.95);
+  }
 }
 
 @media (max-width: 720px) {
@@ -298,6 +337,20 @@
 
   .buttonPrimary {
     align-self: stretch;
+  }
+
+  .buttonDanger {
+    width: 100%;
+  }
+
+  .cancelConfirmActions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .buttonOutlined,
+  .buttonDangerSolid {
+    width: 100%;
   }
 }
 
