@@ -379,3 +379,21 @@ model RateLimit {
   count       Int      @default(0)
   windowStart DateTime @default(now())
 }
+
+// A pgmq message whose consumer Edge Function gave up on it after
+// exceeding its queue's retry ceiling (matching BullMQ's old per-queue
+// `attempts` config) — pgmq itself has no built-in dead-letter handling,
+// so each consumer archives the pgmq message and writes a row here
+// instead of letting it retry forever. See migration
+// 20261012140513_pgmq_queues for the queues this backs.
+model DeadLetterMessage {
+  id            String   @id @default(cuid())
+  queueName     String
+  originalMsgId BigInt
+  payload       Json
+  readCount     Int
+  lastError     String?
+  failedAt      DateTime @default(now())
+
+  @@index([queueName])
+}
