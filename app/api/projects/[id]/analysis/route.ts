@@ -25,21 +25,11 @@ export async function POST(
   const userId = await getSessionUserId();
   if (!userId) return NextResponse.json({ error: "Not signed in." }, { status: 401 });
 
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { emailVerified: true },
-  });
-  if (!user) return NextResponse.json({ error: "No account found." }, { status: 404 });
-
-  // .agent/rules/security.md / PRD: email verification gates analysis, not
-  // signup or upload.
-  if (!user.emailVerified) {
-    return NextResponse.json(
-      { error: "Please verify your email before running an analysis." },
-      { status: 403 }
-    );
-  }
-
+  // Email verification previously gated analysis here (PRD FR-2). Removed
+  // temporarily: Railway blocks outbound SMTP on its Trial/Hobby plan, so
+  // verification codes can't actually be delivered right now, which made
+  // this block every real user outright. Re-add once email delivery is
+  // working again (Resend or a VM host that doesn't block SMTP).
   const project = await prisma.project.findFirst({
     where: { id: projectId, userId },
     select: { id: true },

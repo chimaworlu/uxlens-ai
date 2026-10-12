@@ -247,15 +247,13 @@ export default function ChatPage() {
   const capReached = chatUsedToday >= chatLimit;
   // FR-36 (per product decision: chat is fully disabled on read-only
   // projects, not just upload/analysis) — checked first, since it's a
-  // project-level restriction that overrides the per-user document/
-  // verification gates below.
-  const blockedOn = readOnly
-    ? "read-only"
-    : !hasDocuments
-      ? "documents"
-      : !emailVerified
-        ? "verification"
-        : null;
+  // project-level restriction that overrides the per-user document gate
+  // below. The verification gate that used to sit here (and server-side in
+  // app/api/projects/[id]/chat/route.ts) is temporarily removed — Railway
+  // blocks outbound SMTP on its Trial/Hobby plan, so verification codes
+  // can't actually be delivered right now. Re-add once email delivery
+  // works again.
+  const blockedOn = readOnly ? "read-only" : !hasDocuments ? "documents" : null;
 
   async function handleSend(event: FormEvent) {
     event.preventDefault();
@@ -509,16 +507,12 @@ export default function ChatPage() {
             </div>
           )}
 
-          {pageStatus === "ready" && (blockedOn === "documents" || blockedOn === "verification") && (
+          {pageStatus === "ready" && blockedOn === "documents" && (
             <div className={insightsStyles.emptyState}>
               <DocumentIcon />
-              <h2 className="ds-headline-small">
-                {blockedOn === "documents" ? "Add a document to get started" : "Verify your email to continue"}
-              </h2>
+              <h2 className="ds-headline-small">Add a document to get started</h2>
               <p className="ds-body-large">
-                {blockedOn === "documents"
-                  ? "Upload at least one document before you can chat about your research."
-                  : "Verify your email address before you can chat about your research."}
+                Upload at least one document before you can chat about your research.
               </p>
               <Link href={`/projects/${projectId}`} className={`${layout.buttonPrimary} ds-label-large`}>
                 Back to documents
