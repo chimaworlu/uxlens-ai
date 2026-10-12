@@ -18,11 +18,14 @@ let implicitTlsTransporter: Transporter | undefined;
 // `family: 4` forces IPv4 for the actual socket connection (nodemailer
 // forwards these options straight to node:net/node:tls connect() — it's a
 // real, honored option at runtime even though @types/nodemailer doesn't
-// declare it, hence the cast). Confirmed on Railway: its network resolves
-// smtp.gmail.com to an IPv6 address it has no route to, failing with
-// ENETUNREACH on every attempt — process-wide DNS-order preference alone
-// (worker/index.ts) wasn't enough to avoid it, so this pins the one
-// consistently-broken connection explicitly.
+// declare it, hence the cast). Confirmed on Railway, back when this ran
+// from the worker process: its network resolved smtp.gmail.com to an
+// IPv6 address it had no route to, failing with ENETUNREACH on every
+// attempt, and process-wide DNS-order preference alone wasn't enough to
+// avoid it. Kept even now that this runs from Vercel API routes instead
+// (Phase 6 of the BullMQ -> Supabase Edge Functions migration) — it's a
+// correct, harmless pin either way, and removing it would be an
+// unverified assumption that Vercel's network never hits the same issue.
 function getTransporter(port: 587 | 465): Transporter {
   if (port === 587) {
     if (!startTlsTransporter) {

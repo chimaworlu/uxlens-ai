@@ -17,7 +17,7 @@ Teaches the fixed gate order every route follows before doing real work. The law
 6. **Gate 4 — Quota.** Call the relevant check from `/lib/quota/checks.ts`. Never write an inline `if (count >= limit)` in the route. Over quota → 403 with the upgrade-prompt payload.
 7. **Only now: business logic.** Enqueue the job, run the query, build the response. Expensive work (AI calls, job enqueues, presigns) must sit after all four gates.
 8. Wrap in typed errors. Catch `ValidationError` / `ProviderError` / route-specific classes; return a user-safe message; log full detail with pino.
-9. Add the route's rate limit if the PRD names one (presign 30/hr/user, chat 10/min burst, auth 10/min/IP, demo 20/min/IP), using the Redis sliding-window helper.
+9. Add the route's rate limit if the PRD names one (presign 30/hr/user, chat 10/min burst, auth 10/min/IP, demo 20/min/IP), using the Postgres-backed rate-limit helper (`/lib/security/rate-limit.ts`).
 
 ## Skeleton
 

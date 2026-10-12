@@ -11,16 +11,15 @@
 //
 //   node scripts/seed-demo.ts [--force]
 //
-// Plain `node` execution, same constraints as worker/index.ts: relative
-// imports with explicit .ts extensions, no "@/" alias, .env loaded
-// manually.
+// Plain `node` execution: relative imports with explicit .ts extensions,
+// no "@/" alias, .env loaded manually.
 import "dotenv/config";
 import { setDefaultResultOrder } from "node:dns";
 
-// Same fix as worker/index.ts: this script's R2 upload (fetch) can fail
-// with a generic "fetch failed" on networks that advertise IPv6 for
-// cloudflarestorage.com but can't actually route to it. Preferring IPv4
-// resolution avoids that, same as the worker.
+// This script's R2 upload (fetch) can fail with a generic "fetch failed"
+// on networks that advertise IPv6 for cloudflarestorage.com but can't
+// actually route to it (confirmed on Railway, when that was still where
+// background jobs ran). Preferring IPv4 resolution avoids that.
 setDefaultResultOrder("ipv4first");
 
 import { prisma } from "../lib/db/prisma.ts";
@@ -123,9 +122,9 @@ async function main() {
   }
   console.log("Uploaded demo document to R2.");
 
-  // Same extraction + chunking the doc-processing worker runs on a real
-  // upload (worker/queues/doc-processing.ts) — inline here since this
-  // script isn't going through BullMQ.
+  // Same extraction + chunking the doc-processing Edge Function runs on a
+  // real upload (supabase/functions/doc-processing) — inline here since
+  // this script isn't going through the real queue.
   const { extractedText, pageCount } = await extractText(buffer, "TXT");
   const chunks = chunkText(extractedText);
 

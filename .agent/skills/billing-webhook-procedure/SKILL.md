@@ -23,7 +23,7 @@ Teaches the one ordered spine all five billing surfaces share (checkout, webhook
 ## The procedure — the other surfaces
 
 7. **Checkout** (`/api/billing/checkout`): authenticated route (all four gates from `api-route-creation`), initializes a Paystack transaction referencing the Pro plan_code, NGN only, ₦3,000/month (300000 kobo), single Pro tier. No amount computed client-side; the price is server config.
-8. **Enforcement job** (daily, `cleanup` queue): find subscriptions `PAST_DUE` for more than 5 days → set plan to `FREE`. This job is what ends the grace period; without it, `PAST_DUE` users keep Pro forever (AGENTS.md rule 12). Idempotent: running twice downgrades nobody twice.
+8. **Enforcement job** (daily `pg_cron` job, `run_billing_enforcement`, not a queue — see `background-job-creation`): find subscriptions `PAST_DUE` for more than 5 days → set plan to `FREE`. This job is what ends the grace period; without it, `PAST_DUE` users keep Pro forever (AGENTS.md rule 12). Idempotent: running twice downgrades nobody twice.
 9. **Downgrade effects**: over-cap projects become read-only — upload and analysis disabled, chat still available within free daily caps. Nothing is deleted, ever, by any billing state change (FR-36).
 10. **Portal** (`/api/billing/portal`): usage meters shown to the user derive from the same `UsageRecord` counts the enforcement checks use — displayed usage and enforced usage must never diverge (`money-and-billing.md`). Self-serve cancel (`POST`) resolves the customer's `{subscription_code, email_token}` pair from Paystack fresh at cancel time (via `GET /subscription?plan=...`) rather than depending on having captured it earlier from a webhook.
 

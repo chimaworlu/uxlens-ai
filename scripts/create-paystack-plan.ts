@@ -14,9 +14,8 @@
 // than leaving two live Pro plans for future checkouts to accidentally
 // reference.
 //
-// Plain `node` execution, same constraints as worker/index.ts: relative
-// imports with explicit .ts extensions, no "@/" alias, .env loaded
-// manually.
+// Plain `node` execution: relative imports with explicit .ts extensions,
+// no "@/" alias, .env loaded manually.
 import "dotenv/config";
 import { createPlan } from "../lib/billing/paystack.ts";
 

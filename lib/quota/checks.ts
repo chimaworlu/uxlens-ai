@@ -13,9 +13,9 @@
 //   - R-3   per-user daily AI spend ceiling ($2/day, all plans)
 
 // Relative import with an explicit .ts extension, not the "@/" alias —
-// this file is reachable from worker/index.ts (via pruneAnalysisVersions,
-// called from lib/pipeline/analysis/run.ts), which runs as plain
-// `node worker/index.ts` with no bundler. Node's native ESM resolver
+// this file is reachable from tests/eval/run-golden-set.ts (via
+// pruneAnalysisVersions, called from lib/pipeline/analysis/run.ts), which
+// runs as plain `node` with no bundler. Node's native ESM resolver
 // doesn't understand the "@/" path alias (that's a Next.js/tsconfig-paths
 // feature) and requires explicit file extensions, unlike Next.js route
 // handlers, which is the only context this file originally ran in.
@@ -28,10 +28,10 @@ export class QuotaExceededError extends Error {
   // signature) — that shorthand has real runtime behavior (it implicitly
   // declares and assigns the field), not just an erasable type annotation,
   // so it's not just a stylistic choice: Node's built-in TS type-stripping
-  // (used to run worker/index.ts directly via `node`, no bundler) rejects
-  // it outright with ERR_UNSUPPORTED_TYPESCRIPT_SYNTAX. Next.js's own
-  // compiler (SWC) happens to support it, which is why this only ever
-  // surfaced as the worker process failing to start, not the app itself.
+  // (used to run tests/eval/run-golden-set.ts directly via `node`, no
+  // bundler) rejects it outright with ERR_UNSUPPORTED_TYPESCRIPT_SYNTAX.
+  // Next.js's own compiler (SWC) happens to support it, which is why this
+  // only ever surfaced when running the eval harness, not the app itself.
   public readonly quota: string;
 
   constructor(message: string, quota: string) {

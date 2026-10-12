@@ -6,11 +6,9 @@
     "node": ">=22.0.0"
   },
   "scripts": {
-    "dev": "concurrently -n next,worker -c blue,magenta \"next dev --webpack\" \"node worker/index.ts\"",
-    "dev:web": "next dev --webpack",
+    "dev": "next dev --webpack",
     "build": "next build",
     "start": "next start",
-    "worker": "node worker/index.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "prisma:migrate": "prisma migrate dev",
@@ -27,12 +25,9 @@
     "@prisma/adapter-pg": "^7.9.0",
     "@prisma/client": "^7.9.1",
     "@sentry/nextjs": "^10.73.0",
-    "@sentry/node": "^10.73.0",
     "bcrypt": "^6.0.0",
-    "bullmq": "^5.81.0",
     "csv-parse": "^7.0.2",
     "dotenv": "^17.4.2",
-    "ioredis": "^5.11.1",
     "mammoth": "^1.12.1",
     "next": "^16.2.11",
     "next-auth": "^5.0.0-beta.32",
@@ -55,7 +50,6 @@
     "@types/pg": "^8.20.0",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
-    "concurrently": "^10.0.4",
     "typescript": "^6.0.3",
     "vitest": "^4.1.10"
   }
