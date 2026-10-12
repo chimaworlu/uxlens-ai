@@ -1,10 +1,9 @@
 import { sendToQueue } from "./pgmq.ts";
 
 // Phase 3 of the BullMQ -> Supabase Edge Functions migration (AGENTS.md
-// Section 2): this queue's consumer is now supabase/functions/doc-processing
-// (an Edge Function), not worker/queues/doc-processing.ts — that file and
-// its BullMQ registration in worker/index.ts are now dead code, left in
-// place until the full cutover (Phase 6) rather than deleted mid-migration.
+// Section 2): this queue's consumer is supabase/functions/doc-processing
+// (an Edge Function). The old BullMQ consumer (worker/queues/doc-processing.ts)
+// and the Railway worker process itself are deleted (Phase 6).
 const EDGE_FUNCTION_URL = "https://gxybkoxjcermhxcvveid.supabase.co/functions/v1/doc-processing";
 
 export async function enqueueDocumentProcessing(documentId: string): Promise<void> {

@@ -12,10 +12,12 @@ import type { InsightType } from "@prisma/client";
 // endpoint can reflect it.
 export type RunAnalysisResult = { verifiedCount: number; droppedCount: number };
 
-// Returns Pass C's verified/dropped counts — ignored by the worker's own
-// call site (worker/queues/analysis.ts), but needed by the golden eval
-// runner (tests/eval/run-golden-set.ts) to compute the drop rate (M-3)
-// without duplicating this orchestration logic.
+// This orchestration no longer runs in production (Phase 4 of the BullMQ
+// -> Supabase Edge Functions migration replaced it with a chain of Edge
+// Functions, see lib/queue/analysis.ts) — it's kept as the reference
+// implementation the golden eval runner (tests/eval/run-golden-set.ts)
+// calls directly to compute the drop rate (M-3) without duplicating this
+// orchestration logic in the eval harness itself.
 export async function runAnalysis(analysisId: string): Promise<RunAnalysisResult> {
   const analysis = await prisma.analysis.findUniqueOrThrow({
     where: { id: analysisId },

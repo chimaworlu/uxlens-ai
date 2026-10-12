@@ -30,7 +30,7 @@ Source of truth for requirements: `PRD-UXLens-AI.md`. Source of truth for behavi
 - Small, named functions over clever one-liners. A newcomer should be able to follow a pipeline stage by reading function names, without you explaining it to them.
 - No commented-out code left in a commit. Delete it — git history remembers it.
 - Comment the "why," not the "what." If a comment explains what a line does, the line should be rewritten to be self-explanatory instead.
-- No premature abstraction. Don't build a plugin system, a generic config layer, or a caching layer for something that has exactly one implementation today. The one deliberate exception is the AI provider interface (`/lib/ai/provider.ts`), because the PRD requires DeepSeek/Claude to be swappable by config. A second, non-exempt example: quota checks count `UsageRecord` rows at request time — do not add a counter table, Redis cache, or denormalized running total for this unless a real bottleneck is measured. The PRD explicitly defers that optimization; building it early is scope creep with a technical disguise.
+- No premature abstraction. Don't build a plugin system, a generic config layer, or a caching layer for something that has exactly one implementation today. The one deliberate exception is the AI provider interface (`/lib/ai/provider.ts`), because the PRD requires DeepSeek/Claude to be swappable by config. A second, non-exempt example: quota checks count `UsageRecord` rows at request time — do not add a counter table, external cache, or denormalized running total for this unless a real bottleneck is measured. The PRD explicitly defers that optimization; building it early is scope creep with a technical disguise.
 
 ## Testing
 

@@ -3,13 +3,14 @@ import { sendToQueue } from "./pgmq.ts";
 import { batchChunks } from "../pipeline/analysis/passA.ts";
 
 // Phase 4 of the BullMQ -> Supabase Edge Functions migration (AGENTS.md
-// Section 2): this queue's consumer is now a chain of four Edge Functions
-// (supabase/functions/analysis-pass-{a,b,c,d}), not worker/queues/
-// analysis.ts, which is now dead code left in place until the full cutover
-// (Phase 6). lib/pipeline/analysis/run.ts and its passA-D.ts are NOT dead
-// code despite no longer running in production: tests/eval/run-golden-set.ts
-// still calls runAnalysis directly as the quality-eval harness (M-3 drop
-// rate), so they stay as the reference implementation.
+// Section 2): this queue's consumer is a chain of four Edge Functions
+// (supabase/functions/analysis-pass-{a,b,c,d}). The old BullMQ consumer
+// (worker/queues/analysis.ts) and the Railway worker process itself are
+// deleted (Phase 6). lib/pipeline/analysis/run.ts and its passA-D.ts are
+// NOT dead code despite no longer running in production:
+// tests/eval/run-golden-set.ts still calls runAnalysis directly as the
+// quality-eval harness (M-3 drop rate), so they stay as the reference
+// implementation.
 const ANALYSIS_PASS_A_URL = "https://gxybkoxjcermhxcvveid.supabase.co/functions/v1/analysis-pass-a";
 
 export async function enqueueAnalysis(analysisId: string, projectId: string): Promise<void> {

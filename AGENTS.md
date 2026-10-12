@@ -27,13 +27,13 @@ These choices are already made. You do not evaluate alternatives, propose swaps,
 - TypeScript everywhere. No `.js` application files, no `any` used to dodge a type error. Pinned to `6.0.3`, not the newer `7.x` line: TypeScript 7 restructured its package (native/Go compiler) and dropped the `lib/typescript.js` entry point that Next.js 16.2.10's TypeScript-setup verifier hardcodes, which makes Next think TypeScript isn't installed and loop on auto-install. Revisit this pin once a Next.js release recognizes TS 7's new layout.
 - Prisma as the only ORM. No raw SQL query builders, no second ORM introduced "for this one query" (raw SQL via `prisma.$queryRaw` for the full-text search index is the one named exception — see Section 6 pipeline notes).
 - PostgreSQL as the only database. No SQLite for local dev, no MongoDB for "the chat history because it's more flexible."
-- Supabase Edge Functions + pgmq (Postgres message queue) + pg_cron is the job queue and scheduling system for document processing, the analysis pipeline, and R2 cleanup. BullMQ + Redis is retained for exactly one remaining queue, email, until a verified Resend sending domain exists; once that lands, email moves to the same Edge Function pattern and BullMQ/Redis/the Railway worker are fully decommissioned. (Changed from BullMQ + Redis as the sole queue system by explicit founder decision, 2026-10-12: free/affordable persistent-VM hosting wasn't viable for this deployment, see the migration commits on `checkpoint-2-skeleton-infra` starting at `eddd6d9`. This also reverses the "never move queue consumers into a serverless function" rule below — read the current version of that rule, not this note.)
+- Supabase Edge Functions + pgmq (Postgres message queue) + pg_cron is the job queue and scheduling system for document processing and the analysis pipeline. BullMQ + Redis and the Railway worker process are gone entirely — there is no persistent Node process anywhere in this deployment. R2 cleanup is also an Edge Function; billing enforcement and chat-message pruning are `pg_cron` SQL functions; transactional email is sent synchronously, directly from the Next.js API route that triggers it (no queue at all — see the Services section's Nodemailer entry). (Changed from BullMQ + Redis as the sole queue system by explicit founder decision, 2026-10-12: free/affordable persistent-VM hosting wasn't viable for this deployment, see the migration commits on `checkpoint-2-skeleton-infra` starting at `eddd6d9`. This also reverses the "never move queue consumers into a serverless function" rule below — read the current version of that rule, not this note.)
 - Cloudflare R2 as the only file store. Never store uploaded files on local disk or in Postgres.
 
 **Services**
 - Paystack is the only payment provider. NGN is the only currency. Do not add Stripe, Flutterwave, or any USD price — that is explicitly out of scope (NG-7) until Phase 3, and only then if a documented trigger in the PRD is hit. (Changed from Flutterwave to Paystack by explicit founder decision; see `Docs/prd-uxlens-ai.md` for the FR-33/34 wording this update reflects.)
 - Auth.js (NextAuth v5) with the Prisma adapter is the only auth system. Do not hand-roll session handling.
-- Nodemailer (Gmail SMTP) is the only transactional email provider, for now — this is the one piece of the original stack not yet migrated (see the Stack section's queue entry above). Resend is the approved next step once a sending domain is verified; do not build a third option.
+- Nodemailer (Gmail SMTP) is the only transactional email provider, sent synchronously from inside the Next.js API route that triggers it (never queued — Vercel can freeze background work after a response returns, so the send must be awaited before the route responds). Confirmed working this way after the Railway worker's SMTP-port block made the old queued design undeliverable. Resend remains a documented option if a verified sending domain ever exists, but is not required now that direct Nodemailer delivery works; do not add a third option.
 - Sentry for error tracking, pino for structured logs. Do not add a second logging library.
 
 **AI providers**
@@ -46,7 +46,7 @@ These choices are already made. You do not evaluate alternatives, propose swaps,
 - `DocumentChunk.searchVector` and its GIN index and update trigger are created via raw SQL migration, not through the Prisma schema DSL (`Unsupported("tsvector")` is intentional). Do not try to model it as a normal Prisma-managed column.
 
 **Architecture shape**
-- One Next.js app for UI and API routes. Queue consumers for document processing, the analysis pipeline, and R2 cleanup are Supabase Edge Functions (`supabase/functions/`), one function per queue/pass, triggered by a direct HTTP call right after the producer enqueues a pgmq message plus a `pg_cron` backup poller on each queue — this is a deliberate reversal of the original "BullMQ needs a persistent process, never a serverless function" rule, made because free/affordable persistent-VM hosting wasn't viable for this deployment (see the Stack section). A separate, long-running Node worker process (`worker/index.ts`) still exists, but only for the email queue (BullMQ/Redis) until that migrates too — do not add new queue consumers to this worker; a new queue consumer is an Edge Function by default now.
+- One Next.js app for UI and API routes. There is no separate long-running worker process of any kind — queue consumers for document processing and the analysis pipeline are Supabase Edge Functions (`supabase/functions/`), one function per queue/pass, triggered by a direct HTTP call right after the producer enqueues a pgmq message plus a `pg_cron` backup poller on each queue. This is a deliberate reversal of the original "BullMQ needs a persistent process, never a serverless function" rule, made because free/affordable persistent-VM hosting wasn't viable for this deployment (see the Stack section). Do not reintroduce a persistent Node process — a new background job is a pgmq queue + Edge Function, or a `pg_cron` SQL function, by default now (see the `background-job-creation` skill).
 - Billing enforcement (FR-34) and chat-message pruning (FR-32) run as `pg_cron`-scheduled SQL functions directly in Postgres, not through any queue at all — both are pure read/update/delete logic with no business rules that need a general-purpose runtime, so they skip Edge Functions entirely. Do not move them back into a queued job without a real reason.
 - Analysis status updates are delivered by polling (`GET /api/projects/:id/analysis/status`, ~3s interval), not websockets or server-sent events for status. This is a deliberate MVP simplicity choice, not an oversight — do not add a websocket layer for status updates because it seems like the more modern approach. (Chat responses are the one place SSE streaming is used, per FR-27/FR-28 — that's a different, already-decided mechanism and doesn't change this rule.)
 
@@ -68,7 +68,7 @@ Every rule below is a hard boundary. **Breaking any rule on this list means the 
 
 5. **Never proxy uploaded file bytes through the application server.** Uploads go directly from the browser to Cloudflare R2 via a presigned URL the server generates. If you find yourself writing code that reads a file into the Next.js server and re-uploads it, stop — that is the wrong pattern.
 
-6. **Never call an AI provider from client-side code.** All provider API keys live server-side only — in the worker, in server-only API routes, or (for the analysis pipeline) as Supabase Edge Function secrets, never in `supabase/config.toml` or any file committed to git. If a key would ever end up in a bundle shipped to the browser, that's a stop-everything problem, not a code review comment.
+6. **Never call an AI provider from client-side code.** All provider API keys live server-side only — in server-only API routes, or (for the analysis pipeline) as Supabase Edge Function secrets, never in `supabase/config.toml` or any file committed to git. If a key would ever end up in a bundle shipped to the browser, that's a stop-everything problem, not a code review comment.
 
 7. **Never delete anything on downgrade.** When a user's plan drops below what their data needs, the excess becomes read-only (chat still works within the free daily cap; upload and analysis are disabled). Data is deleted only on explicit user action (document delete, project delete with typed confirmation, account deletion) — never as a side effect of a billing state change. *(FR-36)*
 
@@ -126,11 +126,6 @@ Every rule below is a hard boundary. **Breaking any rule on this list means the 
     /billing/portal/route.ts
     /demo/route.ts
 
-/worker                     # separate long-running process, own entry point
-  index.ts                   # starts the one remaining BullMQ consumer
-  /queues
-    email.ts                  # the only queue left here — pending a verified Resend domain
-
 /supabase
   /functions
     doc-processing/           # Stage 2-3: download, extract, chunk (replaces worker/queues/doc-processing.ts)
@@ -154,7 +149,7 @@ Every rule below is a hard boundary. **Breaking any rule on this list means the 
   /billing
     paystack.ts
   /email
-    nodemailer.ts
+    nodemailer.ts              # called directly and synchronously from the API routes that trigger it, never queued
   /storage
     r2.ts                      # presign, object key builder
   /db
@@ -178,7 +173,6 @@ Rules about this layout:
 - **Never send a whole document to an AI model in one call.** Pass A (`passA.ts`) processes chunk batches (max ~30k input tokens per call), never a full document at once — a single large PDF can exceed a model's context window, and this must not be discovered in production. If a task touches Pass A, confirm the batching logic is present, not "the document fit fine in my test file."
 - **Never fetch `Document.extractedText` by default.** It can hold megabytes of text. Any Prisma query on `Document` for lists, statuses, or metadata must explicitly `select` only the fields it needs. `extractedText` is written only by the `doc-processing` Edge Function (chunking) and read only by the citation panel (surrounding-text lookup).
 - **Pass C (citation verification) lives in `/lib/pipeline/passC.ts` and contains no AI calls.** It is pure code: string matching, normalization, fuzzy matching. If you find yourself asking an LLM to "double check" a citation, that is the wrong file.
-- **The worker and the Next.js app share `/lib` and `/prisma` but nothing else.** The worker never imports from `/app`. The app never runs a BullMQ consumer in-process.
 - **Edge Functions never import from `/lib` or `/app`.** Deno can't resolve Next.js's `@/` path alias or run Prisma's Node-targeted generated client, so any pure logic an Edge Function needs (pipeline extraction/chunking/pass logic, the AI provider client) is ported to `supabase/functions/_shared/` instead. Keep each ported file's algorithm identical to its `/lib` counterpart — when one changes, mirror the change in the other — but expect real per-file differences (dynamic vs. static imports, `Deno.env` vs. `process.env`, hand-written SQL via `pg` instead of Prisma). `lib/pipeline/analysis/run.ts` and its pass files are the one exception kept deliberately unported-from: they're no longer called in production, but `tests/eval/run-golden-set.ts` still calls them directly as the quality-eval harness, so they stay as-is rather than being deleted as dead code.
 
 ---
