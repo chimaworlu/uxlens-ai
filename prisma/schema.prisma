@@ -184,12 +184,74 @@ model Analysis {
   createdAt        DateTime       @default(now())
   completedAt      DateTime?
 
+  // Phase 4 of the BullMQ -> Supabase Edge Functions migration: Pass A now
+  // runs as N independent Edge Function invocations, one per chunk batch
+  // (lib/queue/analysis.ts), instead of one in-process Promise.all — these
+  // two fields are how the last batch to finish recognizes it's the last
+  // one and should dispatch Pass B (atomic UPDATE ... RETURNING, see
+  // supabase/functions/analysis-pass-a/index.ts).
+  passATotalBatches     Int?
+  passACompletedBatches Int @default(0)
+
   project         Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
   insights        Insight[]
   sourceDocuments AnalysisDocument[]
 
+  observations      AnalysisObservation[]
+  clusteredInsights AnalysisClusteredInsight[]
+  verifiedInsights  AnalysisVerifiedInsight[]
+
   @@unique([projectId, version])
   @@index([projectId, status])
+}
+
+// Phase 4 staging tables: each pass used to hand its output to the next
+// in-memory, inside one long-running worker process
+// (lib/pipeline/analysis/run.ts). Chained across separate Edge Function
+// invocations, that handoff goes through the database instead, one small
+// table per pass boundary. Rows are never queried once their Analysis
+// finishes and are cleaned up for free by the Analysis relation's cascade
+// delete, so no separate cleanup job is needed.
+model AnalysisObservation {
+  id            String   @id @default(cuid())
+  analysisId    String
+  type          String
+  statement     String
+  verbatimQuote String
+  chunkId       String
+  createdAt     DateTime @default(now())
+
+  analysis Analysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+
+  @@index([analysisId])
+}
+
+model AnalysisClusteredInsight {
+  id          String   @id @default(cuid())
+  analysisId  String
+  type        String
+  title       String
+  description String
+  citations   Json
+  createdAt   DateTime @default(now())
+
+  analysis Analysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+
+  @@index([analysisId])
+}
+
+model AnalysisVerifiedInsight {
+  id          String   @id @default(cuid())
+  analysisId  String
+  type        String
+  title       String
+  description String
+  citations   Json
+  createdAt   DateTime @default(now())
+
+  analysis Analysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+
+  @@index([analysisId])
 }
 
 model AnalysisDocument {

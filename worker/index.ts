@@ -15,7 +15,6 @@ setDefaultResultOrder("ipv4first");
 import { logger } from "../lib/logger.ts";
 import { startEmailWorker } from "./queues/email.ts";
 import { startCleanupWorker } from "./queues/cleanup.ts";
-import { startAnalysisWorker } from "./queues/analysis.ts";
 import { scheduleBillingEnforcement, scheduleChatMessagePruning } from "../lib/queue/cleanup.ts";
 
 // Separate init from the Next.js app's (sentry.server.config.ts) — this
@@ -47,17 +46,6 @@ cleanupWorker.on("failed", (job, err) => {
   Sentry.captureException(err);
 });
 
-const analysisWorker = startAnalysisWorker();
-
-analysisWorker.on("completed", (job) => {
-  logger.info({ queue: "analysis", jobId: job.id }, "Job completed.");
-});
-
-analysisWorker.on("failed", (job, err) => {
-  logger.error({ queue: "analysis", jobId: job?.id ?? "?", err: err.message }, "Job failed.");
-  Sentry.captureException(err);
-});
-
 scheduleBillingEnforcement().catch((err) => {
   logger.error({ event: "schedule_billing_enforcement_failed", err: err.message }, "Failed to schedule billing-enforcement.");
   Sentry.captureException(err);
@@ -71,16 +59,17 @@ scheduleChatMessagePruning().catch((err) => {
   Sentry.captureException(err);
 });
 
-// doc-processing moved to supabase/functions/doc-processing (Phase 3 of
-// the BullMQ -> Supabase Edge Functions migration) — this process no
-// longer consumes that queue.
-logger.info("Worker started, listening for jobs on queues: email, cleanup, analysis");
+// doc-processing moved to supabase/functions/doc-processing (Phase 3) and
+// analysis moved to supabase/functions/analysis-pass-{a,b,c,d} (Phase 4) of
+// the BullMQ -> Supabase Edge Functions migration — this process no longer
+// consumes either queue.
+logger.info("Worker started, listening for jobs on queues: email, cleanup");
 
 // Hosts (Railway, Render, Fly) send SIGTERM on every redeploy. close() waits for
-// in-flight jobs to finish, so a long analysis run isn't cut off mid-pipeline.
+// in-flight jobs to finish before the process exits.
 async function shutdown(signal: NodeJS.Signals) {
   logger.info({ signal }, "Shutting down workers.");
-  await Promise.all([emailWorker.close(), cleanupWorker.close(), analysisWorker.close()]);
+  await Promise.all([emailWorker.close(), cleanupWorker.close()]);
   process.exit(0);
 }
 

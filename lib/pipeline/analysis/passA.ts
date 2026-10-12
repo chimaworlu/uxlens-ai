@@ -18,9 +18,13 @@ const SYSTEM_PROMPT = `You are analyzing raw UX research documents (interview tr
 
 Respond with ONLY a JSON array of these objects, nothing else — no markdown, no commentary. If a chunk has no clear observations, contribute nothing from it.`;
 
-type ChunkInput = { id: string; content: string };
+export type ChunkInput = { id: string; content: string };
 
-function batchChunks(chunks: ChunkInput[]): ChunkInput[][] {
+// Exported for lib/queue/analysis.ts (Phase 4 of the BullMQ -> Supabase
+// Edge Functions migration): the producer now has to split work into one
+// pgmq message per batch up front, instead of this file's own runPassA
+// looping over batches in-process — same batching logic, two call sites.
+export function batchChunks(chunks: ChunkInput[]): ChunkInput[][] {
   const batches: ChunkInput[][] = [];
   let current: ChunkInput[] = [];
   let currentTokens = 0;
