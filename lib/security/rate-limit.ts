@@ -1,21 +1,23 @@
-import { getRedisConnection } from "@/lib/queue/connection";
+import { prisma } from "@/lib/db/prisma";
 
-// Fixed-window counter on the existing Redis connection — no new
-// infrastructure (AGENTS.md Section 2: Redis is locked, already provisioned
-// for BullMQ). Good enough for the limits this project actually needs;
-// nothing here claims to be a general-purpose rate-limit library.
+// Fixed-window counter on Postgres (the `check_rate_limit`/`release_rate_limit`
+// functions and `RateLimit` table added in migration
+// 20261012134952_rate_limit_postgres) — replaces the Redis INCR/EXPIRE
+// version used before the Supabase Edge Functions migration (AGENTS.md
+// Section 2): the worker no longer runs anywhere Redis would naturally
+// live, so this keeps the same fixed-window semantics without a second
+// piece of infrastructure. Good enough for the limits this project
+// actually needs; nothing here claims to be a general-purpose rate-limit
+// library.
 export async function checkRateLimit(
   key: string,
   limit: number,
   windowSeconds: number
 ): Promise<boolean> {
-  const redis = getRedisConnection();
-  const redisKey = `rate-limit:${key}`;
-  const count = await redis.incr(redisKey);
-  if (count === 1) {
-    await redis.expire(redisKey, windowSeconds);
-  }
-  return count <= limit;
+  const result = await prisma.$queryRaw<{ allowed: boolean }[]>`
+    SELECT check_rate_limit(${key}, ${limit}, ${windowSeconds}) AS allowed
+  `;
+  return result[0]?.allowed ?? false;
 }
 
 // For a tightly-capped quota (e.g. the demo's 3-messages-per-session
@@ -27,6 +29,5 @@ export async function checkRateLimit(
 // "research doesn't cover this") — that's a real, correct answer, not a
 // failure, and should still count.
 export async function releaseRateLimit(key: string): Promise<void> {
-  const redis = getRedisConnection();
-  await redis.decr(`rate-limit:${key}`);
+  await prisma.$executeRaw`SELECT release_rate_limit(${key})`;
 }
