@@ -62,7 +62,7 @@ function dedupeByFilename(
 }
 
 // FR-32: soft delete — hard deletion happens 30 days later via the daily
-// prune-deleted-chat-messages cleanup job (lib/pipeline/chat/prune.ts).
+// run_chat_message_pruning pg_cron job (migration 20261012170000).
 export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ id: string }> }

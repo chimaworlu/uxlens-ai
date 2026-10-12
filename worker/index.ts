@@ -15,7 +15,6 @@ setDefaultResultOrder("ipv4first");
 import { logger } from "../lib/logger.ts";
 import { startEmailWorker } from "./queues/email.ts";
 import { startCleanupWorker } from "./queues/cleanup.ts";
-import { scheduleBillingEnforcement, scheduleChatMessagePruning } from "../lib/queue/cleanup.ts";
 
 // Separate init from the Next.js app's (sentry.server.config.ts) — this
 // process never goes through Next's build or instrumentation.ts, since
@@ -46,23 +45,13 @@ cleanupWorker.on("failed", (job, err) => {
   Sentry.captureException(err);
 });
 
-scheduleBillingEnforcement().catch((err) => {
-  logger.error({ event: "schedule_billing_enforcement_failed", err: err.message }, "Failed to schedule billing-enforcement.");
-  Sentry.captureException(err);
-});
-
-scheduleChatMessagePruning().catch((err) => {
-  logger.error(
-    { event: "schedule_chat_pruning_failed", err: err.message },
-    "Failed to schedule prune-deleted-chat-messages."
-  );
-  Sentry.captureException(err);
-});
-
 // doc-processing moved to supabase/functions/doc-processing (Phase 3) and
 // analysis moved to supabase/functions/analysis-pass-{a,b,c,d} (Phase 4) of
 // the BullMQ -> Supabase Edge Functions migration — this process no longer
-// consumes either queue.
+// consumes either queue. Billing enforcement and chat-message pruning
+// (Phase 5) now run as pg_cron-scheduled SQL functions directly in
+// Postgres (migration 20261012170000) instead of a BullMQ repeatable job
+// this process used to upsert on every startup.
 logger.info("Worker started, listening for jobs on queues: email, cleanup");
 
 // Hosts (Railway, Render, Fly) send SIGTERM on every redeploy. close() waits for
