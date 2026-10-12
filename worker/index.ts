@@ -15,7 +15,6 @@ setDefaultResultOrder("ipv4first");
 import { logger } from "../lib/logger.ts";
 import { startEmailWorker } from "./queues/email.ts";
 import { startCleanupWorker } from "./queues/cleanup.ts";
-import { startDocProcessingWorker } from "./queues/doc-processing.ts";
 import { startAnalysisWorker } from "./queues/analysis.ts";
 import { scheduleBillingEnforcement, scheduleChatMessagePruning } from "../lib/queue/cleanup.ts";
 
@@ -48,17 +47,6 @@ cleanupWorker.on("failed", (job, err) => {
   Sentry.captureException(err);
 });
 
-const docProcessingWorker = startDocProcessingWorker();
-
-docProcessingWorker.on("completed", (job) => {
-  logger.info({ queue: "doc-processing", jobId: job.id }, "Job completed.");
-});
-
-docProcessingWorker.on("failed", (job, err) => {
-  logger.error({ queue: "doc-processing", jobId: job?.id ?? "?", err: err.message }, "Job failed.");
-  Sentry.captureException(err);
-});
-
 const analysisWorker = startAnalysisWorker();
 
 analysisWorker.on("completed", (job) => {
@@ -83,18 +71,16 @@ scheduleChatMessagePruning().catch((err) => {
   Sentry.captureException(err);
 });
 
-logger.info("Worker started, listening for jobs on queues: email, cleanup, doc-processing, analysis");
+// doc-processing moved to supabase/functions/doc-processing (Phase 3 of
+// the BullMQ -> Supabase Edge Functions migration) — this process no
+// longer consumes that queue.
+logger.info("Worker started, listening for jobs on queues: email, cleanup, analysis");
 
 // Hosts (Railway, Render, Fly) send SIGTERM on every redeploy. close() waits for
 // in-flight jobs to finish, so a long analysis run isn't cut off mid-pipeline.
 async function shutdown(signal: NodeJS.Signals) {
   logger.info({ signal }, "Shutting down workers.");
-  await Promise.all([
-    emailWorker.close(),
-    cleanupWorker.close(),
-    docProcessingWorker.close(),
-    analysisWorker.close(),
-  ]);
+  await Promise.all([emailWorker.close(), cleanupWorker.close(), analysisWorker.close()]);
   process.exit(0);
 }
 
