@@ -5,7 +5,7 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/db/prisma";
 import { verifyPassword } from "@/lib/auth/password";
-import { enqueueWelcomeEmail } from "@/lib/queue/email";
+import { sendWelcomeEmail } from "@/lib/email/nodemailer";
 import { authConfig } from "./auth.config";
 import { GOOGLE_INTENT_COOKIE } from "@/lib/auth/google-intent";
 
@@ -51,7 +51,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async createUser({ user }) {
       if (!user.email) return;
       try {
-        await enqueueWelcomeEmail(user.email, user.name ?? "there");
+        await sendWelcomeEmail(user.email, user.name ?? "there");
       } catch {
         // Best-effort, same as the register route's welcome email.
       }

@@ -1,8 +1,8 @@
-// Ported from lib/storage/r2.ts's downloadObject — only the read path
-// this function needs, not the presign/upload side (that stays entirely
-// on the Next.js app, per AGENTS.md: uploads never proxy through any
-// app server, Edge Functions included).
-import { S3Client, GetObjectCommand } from "npm:@aws-sdk/client-s3@3";
+// Ported from lib/storage/r2.ts — downloadObject (doc-processing, Phase 3)
+// and deleteObject (cleanup, Phase 5), not the presign/upload side (that
+// stays entirely on the Next.js app, per AGENTS.md: uploads never proxy
+// through any app server, Edge Functions included).
+import { S3Client, GetObjectCommand, DeleteObjectCommand } from "npm:@aws-sdk/client-s3@3";
 
 let client: InstanceType<typeof S3Client> | undefined;
 
@@ -28,4 +28,13 @@ export async function downloadObject(key: string): Promise<Uint8Array> {
   const response = await getClient().send(command);
   const bytes = await response.Body?.transformToByteArray();
   return bytes ?? new Uint8Array();
+}
+
+export async function deleteObject(key: string): Promise<void> {
+  await getClient().send(
+    new DeleteObjectCommand({
+      Bucket: Deno.env.get("R2_BUCKET_NAME"),
+      Key: key,
+    })
+  );
 }

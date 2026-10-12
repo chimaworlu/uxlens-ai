@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db/prisma";
 import { createVerificationCode } from "@/lib/auth/verification";
-import { enqueueVerificationEmail } from "@/lib/queue/email";
+import { sendVerificationEmail } from "@/lib/email/nodemailer";
 import { checkRateLimit } from "@/lib/security/rate-limit";
+import { logger } from "@/lib/logger";
 
 const RequestSchema = z.object({
   email: z.string().trim().toLowerCase().min(1),
@@ -66,7 +67,19 @@ export async function POST(request: Request) {
   }
 
   const code = await createVerificationCode(email);
-  await enqueueVerificationEmail(email, code);
+
+  try {
+    await sendVerificationEmail(email, code);
+  } catch (error) {
+    logger.error(
+      { event: "presignup_verification_email_send_failed", err: error instanceof Error ? error.message : String(error) },
+      "Failed to send pre-signup verification email."
+    );
+    return NextResponse.json(
+      { error: "Could not send a verification code. Please try again." },
+      { status: 502 }
+    );
+  }
 
   return NextResponse.json({ sent: true }, { status: 200 });
 }

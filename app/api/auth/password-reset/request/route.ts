@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db/prisma";
 import { createVerificationCode } from "@/lib/auth/verification";
-import { enqueuePasswordResetEmail } from "@/lib/queue/email";
+import { sendPasswordResetEmail } from "@/lib/email/nodemailer";
 
 const RequestSchema = z.object({
   email: z.string().trim().toLowerCase().min(1),
@@ -29,7 +29,15 @@ export async function POST(request: Request) {
   const user = await prisma.user.findUnique({ where: { email }, select: { id: true } });
   if (user) {
     const code = await createVerificationCode(email);
-    await enqueuePasswordResetEmail(email, code);
+    // Swallowed on failure, not surfaced: this route's response must stay
+    // identical whether or not an account exists (anti-enumeration), so a
+    // send failure can't be allowed to produce a different response shape
+    // or status than the no-such-account path below.
+    try {
+      await sendPasswordResetEmail(email, code);
+    } catch {
+      // Intentionally ignored — see comment above.
+    }
   }
 
   return NextResponse.json({ message: GENERIC_MESSAGE }, { status: 200 });

@@ -438,3 +438,8 @@ entrypoint = "./functions/analysis-pass-c/index.ts"
 enabled = true
 verify_jwt = false
 entrypoint = "./functions/analysis-pass-d/index.ts"
+
+[functions.cleanup]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/cleanup/index.ts"

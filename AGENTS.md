@@ -27,13 +27,13 @@ These choices are already made. You do not evaluate alternatives, propose swaps,
 - TypeScript everywhere. No `.js` application files, no `any` used to dodge a type error. Pinned to `6.0.3`, not the newer `7.x` line: TypeScript 7 restructured its package (native/Go compiler) and dropped the `lib/typescript.js` entry point that Next.js 16.2.10's TypeScript-setup verifier hardcodes, which makes Next think TypeScript isn't installed and loop on auto-install. Revisit this pin once a Next.js release recognizes TS 7's new layout.
 - Prisma as the only ORM. No raw SQL query builders, no second ORM introduced "for this one query" (raw SQL via `prisma.$queryRaw` for the full-text search index is the one named exception — see Section 6 pipeline notes).
 - PostgreSQL as the only database. No SQLite for local dev, no MongoDB for "the chat history because it's more flexible."
-- BullMQ + Redis as the only job queue. No cron-only solutions, no second queue library.
+- Supabase Edge Functions + pgmq (Postgres message queue) + pg_cron is the job queue and scheduling system for document processing, the analysis pipeline, and R2 cleanup. BullMQ + Redis is retained for exactly one remaining queue, email, until a verified Resend sending domain exists; once that lands, email moves to the same Edge Function pattern and BullMQ/Redis/the Railway worker are fully decommissioned. (Changed from BullMQ + Redis as the sole queue system by explicit founder decision, 2026-10-12: free/affordable persistent-VM hosting wasn't viable for this deployment, see the migration commits on `checkpoint-2-skeleton-infra` starting at `eddd6d9`. This also reverses the "never move queue consumers into a serverless function" rule below — read the current version of that rule, not this note.)
 - Cloudflare R2 as the only file store. Never store uploaded files on local disk or in Postgres.
 
 **Services**
 - Paystack is the only payment provider. NGN is the only currency. Do not add Stripe, Flutterwave, or any USD price — that is explicitly out of scope (NG-7) until Phase 3, and only then if a documented trigger in the PRD is hit. (Changed from Flutterwave to Paystack by explicit founder decision; see `Docs/prd-uxlens-ai.md` for the FR-33/34 wording this update reflects.)
 - Auth.js (NextAuth v5) with the Prisma adapter is the only auth system. Do not hand-roll session handling.
-- Nodemailer (Gmail SMTP) is the only transactional email provider.
+- Nodemailer (Gmail SMTP) is the only transactional email provider, for now — this is the one piece of the original stack not yet migrated (see the Stack section's queue entry above). Resend is the approved next step once a sending domain is verified; do not build a third option.
 - Sentry for error tracking, pino for structured logs. Do not add a second logging library.
 
 **AI providers**
@@ -46,7 +46,8 @@ These choices are already made. You do not evaluate alternatives, propose swaps,
 - `DocumentChunk.searchVector` and its GIN index and update trigger are created via raw SQL migration, not through the Prisma schema DSL (`Unsupported("tsvector")` is intentional). Do not try to model it as a normal Prisma-managed column.
 
 **Architecture shape**
-- One Next.js app for UI and API routes. One separate, long-running Node worker process (its own entry point, e.g. `worker/index.ts`) for BullMQ consumers. These are two deployable processes, not one. Never move queue consumers into a Next.js API route or a serverless function — BullMQ needs a persistent process.
+- One Next.js app for UI and API routes. Queue consumers for document processing, the analysis pipeline, and R2 cleanup are Supabase Edge Functions (`supabase/functions/`), one function per queue/pass, triggered by a direct HTTP call right after the producer enqueues a pgmq message plus a `pg_cron` backup poller on each queue — this is a deliberate reversal of the original "BullMQ needs a persistent process, never a serverless function" rule, made because free/affordable persistent-VM hosting wasn't viable for this deployment (see the Stack section). A separate, long-running Node worker process (`worker/index.ts`) still exists, but only for the email queue (BullMQ/Redis) until that migrates too — do not add new queue consumers to this worker; a new queue consumer is an Edge Function by default now.
+- Billing enforcement (FR-34) and chat-message pruning (FR-32) run as `pg_cron`-scheduled SQL functions directly in Postgres, not through any queue at all — both are pure read/update/delete logic with no business rules that need a general-purpose runtime, so they skip Edge Functions entirely. Do not move them back into a queued job without a real reason.
 - Analysis status updates are delivered by polling (`GET /api/projects/:id/analysis/status`, ~3s interval), not websockets or server-sent events for status. This is a deliberate MVP simplicity choice, not an oversight — do not add a websocket layer for status updates because it seems like the more modern approach. (Chat responses are the one place SSE streaming is used, per FR-27/FR-28 — that's a different, already-decided mechanism and doesn't change this rule.)
 
 If a task asks you to add a tool or service not on this list, stop and flag it instead of adding it.
@@ -67,7 +68,7 @@ Every rule below is a hard boundary. **Breaking any rule on this list means the 
 
 5. **Never proxy uploaded file bytes through the application server.** Uploads go directly from the browser to Cloudflare R2 via a presigned URL the server generates. If you find yourself writing code that reads a file into the Next.js server and re-uploads it, stop — that is the wrong pattern.
 
-6. **Never call an AI provider from client-side code.** All provider API keys live server-side only, in the worker or in server-only API routes. If a key would ever end up in a bundle shipped to the browser, that's a stop-everything problem, not a code review comment.
+6. **Never call an AI provider from client-side code.** All provider API keys live server-side only — in the worker, in server-only API routes, or (for the analysis pipeline) as Supabase Edge Function secrets, never in `supabase/config.toml` or any file committed to git. If a key would ever end up in a bundle shipped to the browser, that's a stop-everything problem, not a code review comment.
 
 7. **Never delete anything on downgrade.** When a user's plan drops below what their data needs, the excess becomes read-only (chat still works within the free daily cap; upload and analysis are disabled). Data is deleted only on explicit user action (document delete, project delete with typed confirmation, account deletion) — never as a side effect of a billing state change. *(FR-36)*
 
@@ -126,11 +127,19 @@ Every rule below is a hard boundary. **Breaking any rule on this list means the 
     /demo/route.ts
 
 /worker                     # separate long-running process, own entry point
-  index.ts                   # starts all BullMQ consumers
+  index.ts                   # starts the one remaining BullMQ consumer
   /queues
-    doc-processing.ts
-    analysis.ts
-    cleanup.ts
+    email.ts                  # the only queue left here — pending a verified Resend domain
+
+/supabase
+  /functions
+    doc-processing/           # Stage 2-3: download, extract, chunk (replaces worker/queues/doc-processing.ts)
+    analysis-pass-a/          # Stage 4 Pass A, one invocation per chunk batch
+    analysis-pass-b/          # Stage 4 Pass B
+    analysis-pass-c/          # Stage 4 Pass C, still pure code, no AI call
+    analysis-pass-d/          # Stage 4 Pass D + final persistence
+    cleanup/                  # R2 object deletion (replaces worker/queues/cleanup.ts)
+    _shared/                  # Deno ports of the pure-logic pipeline/AI files these functions need
 
 /lib
   /ai
@@ -167,9 +176,10 @@ Rules about this layout:
 - **Quota and limit checks live in one place** (`/lib/quota`), not scattered inline in route handlers. Every enforcement point in Section 3, rule 4, calls into this module. If you're about to write `if (count >= limit)` somewhere outside `/lib/quota`, stop and put the check there instead.
 - **The AI provider interface (`/lib/ai/provider.ts`) is the only place that knows which provider is active.** Nothing else imports `deepseek.ts` or `claude.ts` directly.
 - **Never send a whole document to an AI model in one call.** Pass A (`passA.ts`) processes chunk batches (max ~30k input tokens per call), never a full document at once — a single large PDF can exceed a model's context window, and this must not be discovered in production. If a task touches Pass A, confirm the batching logic is present, not "the document fit fine in my test file."
-- **Never fetch `Document.extractedText` by default.** It can hold megabytes of text. Any Prisma query on `Document` for lists, statuses, or metadata must explicitly `select` only the fields it needs. `extractedText` is fetched only by the worker (chunking) and the citation panel (surrounding-text lookup).
+- **Never fetch `Document.extractedText` by default.** It can hold megabytes of text. Any Prisma query on `Document` for lists, statuses, or metadata must explicitly `select` only the fields it needs. `extractedText` is written only by the `doc-processing` Edge Function (chunking) and read only by the citation panel (surrounding-text lookup).
 - **Pass C (citation verification) lives in `/lib/pipeline/passC.ts` and contains no AI calls.** It is pure code: string matching, normalization, fuzzy matching. If you find yourself asking an LLM to "double check" a citation, that is the wrong file.
 - **The worker and the Next.js app share `/lib` and `/prisma` but nothing else.** The worker never imports from `/app`. The app never runs a BullMQ consumer in-process.
+- **Edge Functions never import from `/lib` or `/app`.** Deno can't resolve Next.js's `@/` path alias or run Prisma's Node-targeted generated client, so any pure logic an Edge Function needs (pipeline extraction/chunking/pass logic, the AI provider client) is ported to `supabase/functions/_shared/` instead. Keep each ported file's algorithm identical to its `/lib` counterpart — when one changes, mirror the change in the other — but expect real per-file differences (dynamic vs. static imports, `Deno.env` vs. `process.env`, hand-written SQL via `pg` instead of Prisma). `lib/pipeline/analysis/run.ts` and its pass files are the one exception kept deliberately unported-from: they're no longer called in production, but `tests/eval/run-golden-set.ts` still calls them directly as the quality-eval harness, so they stay as-is rather than being deleted as dead code.
 
 ---
 
@@ -195,7 +205,7 @@ Before you consider any task complete, produce a checklist covering everything b
 - [ ] Every functional requirement (FR-#) the task was scoped to implement is fully implemented — not partially, not with a TODO standing in for the hard part.
 - [ ] Every quota, cap, and limit relevant to the task is enforced **server-side** and routes through `/lib/quota` (Section 3, rule 4).
 - [ ] If the task touches insight generation, chat, or citations: no insight or chat answer can render without a verified citation, and this was checked by tracing the actual code path, not assumed.
-- [ ] If the task touches billing: the webhook handler is idempotent, and the grace-period-to-downgrade path is wired to the `cleanup` queue's billing-enforcement job.
+- [ ] If the task touches billing: the webhook handler is idempotent, and the grace-period-to-downgrade path is wired to the daily `run_billing_enforcement` `pg_cron` job.
 - [ ] If the task touches uploads: MIME validation happens both client-side and server-side (magic bytes), and files never pass through the app server.
 - [ ] If the task touches AI calls: they go through `/lib/ai/provider.ts`, never a direct provider SDK call from application code.
 - [ ] Zod schemas validate every new API input and every new AI JSON output.

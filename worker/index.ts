@@ -14,7 +14,6 @@ import * as Sentry from "@sentry/node";
 setDefaultResultOrder("ipv4first");
 import { logger } from "../lib/logger.ts";
 import { startEmailWorker } from "./queues/email.ts";
-import { startCleanupWorker } from "./queues/cleanup.ts";
 
 // Separate init from the Next.js app's (sentry.server.config.ts) — this
 // process never goes through Next's build or instrumentation.ts, since
@@ -34,31 +33,20 @@ emailWorker.on("failed", (job, err) => {
   Sentry.captureException(err);
 });
 
-const cleanupWorker = startCleanupWorker();
-
-cleanupWorker.on("completed", (job) => {
-  logger.info({ queue: "cleanup", jobId: job.id }, "Job completed.");
-});
-
-cleanupWorker.on("failed", (job, err) => {
-  logger.error({ queue: "cleanup", jobId: job?.id ?? "?", err: err.message }, "Job failed.");
-  Sentry.captureException(err);
-});
-
-// doc-processing moved to supabase/functions/doc-processing (Phase 3) and
-// analysis moved to supabase/functions/analysis-pass-{a,b,c,d} (Phase 4) of
-// the BullMQ -> Supabase Edge Functions migration — this process no longer
-// consumes either queue. Billing enforcement and chat-message pruning
-// (Phase 5) now run as pg_cron-scheduled SQL functions directly in
-// Postgres (migration 20261012170000) instead of a BullMQ repeatable job
-// this process used to upsert on every startup.
-logger.info("Worker started, listening for jobs on queues: email, cleanup");
+// doc-processing (Phase 3), analysis (Phase 4), and cleanup (Phase 5) all
+// moved to Supabase Edge Functions — this process no longer consumes any
+// of those queues. Billing enforcement and chat-message pruning (Phase 5)
+// now run as pg_cron-scheduled SQL functions directly in Postgres
+// (migration 20261012170000) instead of a BullMQ repeatable job this
+// process used to upsert on every startup. Email is the only queue left
+// here, pending a verified Resend sending domain.
+logger.info("Worker started, listening for jobs on queue: email");
 
 // Hosts (Railway, Render, Fly) send SIGTERM on every redeploy. close() waits for
 // in-flight jobs to finish before the process exits.
 async function shutdown(signal: NodeJS.Signals) {
   logger.info({ signal }, "Shutting down workers.");
-  await Promise.all([emailWorker.close(), cleanupWorker.close()]);
+  await emailWorker.close();
   process.exit(0);
 }
 
