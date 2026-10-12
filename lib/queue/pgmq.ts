@@ -14,6 +14,9 @@ import { prisma } from "@/lib/db/prisma";
 export const RETRY_LIMITS: Record<string, number> = {
   doc_processing: 3,
   analysis: 2,
+  analysis_pass_b: 2,
+  analysis_pass_c: 2,
+  analysis_pass_d: 2,
   cleanup: 3,
   email: 3,
 };
