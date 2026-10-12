@@ -3,7 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db/prisma";
 import { hashPassword } from "@/lib/auth/password";
 import { consumeEmailProofToken } from "@/lib/auth/verification";
-import { enqueueWelcomeEmail } from "@/lib/queue/email";
+import { sendWelcomeEmail } from "@/lib/email/nodemailer";
 import { validateEmail, validateFullName, isPasswordValid } from "@/lib/validation/auth";
 
 // Never trust the client alone: the same rules the sign-up form checks in
@@ -106,12 +106,12 @@ export async function POST(request: Request) {
   // redeemed just now, this account was already created verified, and the
   // dashboard banner simply won't show for it.
 
-  // The welcome email is best-effort: it's queued only after the account
-  // row above has actually committed, but a failure here (e.g. Redis is
-  // down) must never turn a successful account creation into an error
-  // response — so the enqueue failure is swallowed, not rethrown.
+  // The welcome email is best-effort: it's sent only after the account row
+  // above has actually committed, but a failure here (e.g. a transient SMTP
+  // error) must never turn a successful account creation into an error
+  // response — so the send failure is swallowed, not rethrown.
   try {
-    await enqueueWelcomeEmail(user.email, fullName);
+    await sendWelcomeEmail(user.email, fullName);
   } catch {
     // Intentionally ignored — see comment above.
   }

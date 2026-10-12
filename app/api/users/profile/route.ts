@@ -3,7 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db/prisma";
 import { validateEmail, validateFullName } from "@/lib/validation/auth";
 import { createVerificationCode } from "@/lib/auth/verification";
-import { enqueueVerificationEmail } from "@/lib/queue/email";
+import { sendVerificationEmail } from "@/lib/email/nodemailer";
 import { getSessionUserId } from "@/lib/auth/session";
 
 // FR-39: name saves immediately, no confirmation step; email requires
@@ -75,7 +75,15 @@ export async function PATCH(request: Request) {
 
   if (emailChanged) {
     const code = await createVerificationCode(user.email);
-    await enqueueVerificationEmail(user.email, code);
+    // Best-effort, same reasoning as the register route's welcome email:
+    // the profile/email change itself already committed above, so a
+    // transient send failure shouldn't turn that success into an error
+    // response — the user can still retry via the dashboard's resend flow.
+    try {
+      await sendVerificationEmail(user.email, code);
+    } catch {
+      // Intentionally ignored — see comment above.
+    }
   }
 
   return NextResponse.json({ name: user.name, email: user.email, emailChanged });

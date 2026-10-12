@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { enqueueContactEmail } from "@/lib/queue/email";
+import { sendContactEmail } from "@/lib/email/nodemailer";
 import { checkRateLimit } from "@/lib/security/rate-limit";
+import { logger } from "@/lib/logger";
 import { validateEmail, validateFullName } from "@/lib/validation/auth";
 import { validateContactMessage } from "@/lib/validation/contact";
 
@@ -46,7 +47,19 @@ export async function POST(request: Request) {
   }
 
   const { name, email, message } = parsed.data;
-  await enqueueContactEmail(name, email, message);
+
+  try {
+    await sendContactEmail(name, email, message);
+  } catch (error) {
+    logger.error(
+      { event: "contact_email_send_failed", err: error instanceof Error ? error.message : String(error) },
+      "Failed to send contact form email."
+    );
+    return NextResponse.json(
+      { error: "Couldn't send your message. Please try again." },
+      { status: 502 }
+    );
+  }
 
   return NextResponse.json({ sent: true }, { status: 200 });
 }

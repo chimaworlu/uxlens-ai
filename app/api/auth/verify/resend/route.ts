@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db/prisma";
 import { createVerificationCode } from "@/lib/auth/verification";
-import { enqueueVerificationEmail } from "@/lib/queue/email";
+import { sendVerificationEmail } from "@/lib/email/nodemailer";
 import { getSessionUserId } from "@/lib/auth/session";
+import { logger } from "@/lib/logger";
 
 export async function POST() {
   const userId = await getSessionUserId();
@@ -22,7 +23,19 @@ export async function POST() {
   }
 
   const code = await createVerificationCode(user.email);
-  await enqueueVerificationEmail(user.email, code);
+
+  try {
+    await sendVerificationEmail(user.email, code);
+  } catch (error) {
+    logger.error(
+      { event: "verification_email_send_failed", err: error instanceof Error ? error.message : String(error) },
+      "Failed to send verification email."
+    );
+    return NextResponse.json(
+      { error: "Could not send a verification code. Please try again." },
+      { status: 502 }
+    );
+  }
 
   return NextResponse.json({ sent: true }, { status: 200 });
 }
