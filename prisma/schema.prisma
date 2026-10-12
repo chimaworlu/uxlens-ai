@@ -365,3 +365,35 @@ model PaymentLog {
   @@index([userId])
   @@index([createdAt])
 }
+
+// Replaces the Redis-backed fixed-window counter lib/security/rate-limit.ts
+// used before the Supabase-Edge-Functions migration (AGENTS.md Section 2) —
+// same semantics (key, count, window start), just on Postgres instead of
+// Redis, since the worker no longer runs anywhere Redis would naturally
+// live. The increment/reset/release logic is raw SQL (check_rate_limit,
+// release_rate_limit functions, see the migration that adds this model),
+// not representable atomically through the Prisma schema DSL alone, same
+// reasoning as DocumentChunk.searchVector.
+model RateLimit {
+  key         String   @id
+  count       Int      @default(0)
+  windowStart DateTime @default(now())
+}
+
+// A pgmq message whose consumer Edge Function gave up on it after
+// exceeding its queue's retry ceiling (matching BullMQ's old per-queue
+// `attempts` config) — pgmq itself has no built-in dead-letter handling,
+// so each consumer archives the pgmq message and writes a row here
+// instead of letting it retry forever. See migration
+// 20261012140513_pgmq_queues for the queues this backs.
+model DeadLetterMessage {
+  id            String   @id @default(cuid())
+  queueName     String
+  originalMsgId BigInt
+  payload       Json
+  readCount     Int
+  lastError     String?
+  failedAt      DateTime @default(now())
+
+  @@index([queueName])
+}

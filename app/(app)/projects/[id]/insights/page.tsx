@@ -179,26 +179,11 @@ function ProjectInsightsContent() {
   }, [projectId, loadAnalysis, loadVersions]);
 
   const triggerAnalysis = useCallback(async (options?: { verified?: boolean }) => {
-    // FR-2: checked client-side first (not just left to the server's own
-    // 403 — see app/api/projects/[id]/analysis/route.ts) so both the
-    // first-run "Run analysis" button and the top-nav "Re-run analysis"
-    // button funnel through this one gate rather than one of them relying
-    // on a round-trip failure. Re-checked here (not just hidden/disabled
-    // in the UI) because emailVerified can flip back to false after an
-    // email change (FR-39), including for an account that already has a
-    // completed analysis.
-    //
-    // options?.verified lets a caller assert "yes, definitely verified"
-    // instead of relying on the closed-over emailVerified state: right
-    // after setEmailVerified(true), this callback is still the one from
-    // the prior render (state updates aren't visible mid-handler), so
-    // reading emailVerified here would see the stale `false` and bounce
-    // straight back to the refusal view. See handleEmailVerified below.
-    const verified = options?.verified ?? emailVerified;
-    if (!verified) {
-      setView({ kind: "refusal", reason: "unverified" });
-      return;
-    }
+    // FR-2's client-side verification gate was removed here (matching the
+    // server-side removal in app/api/projects/[id]/analysis/route.ts) —
+    // Railway blocks outbound SMTP on its Trial/Hobby plan, so verification
+    // codes can't actually be delivered right now. Re-add once email
+    // delivery works again.
     setView({ kind: "in-progress", progressStage: null });
     const response = await fetch(`/api/projects/${projectId}/analysis`, { method: "POST" });
 
@@ -223,7 +208,7 @@ function ProjectInsightsContent() {
     } else {
       setView({ kind: "failed", reason: data.error ?? "Something went wrong. Please try again." });
     }
-  }, [projectId, fetchStatus, emailVerified]);
+  }, [projectId, fetchStatus]);
 
   // Send-then-open, same pattern as the sign-up flow's "Verify email" link
   // (app/(marketing)/auth/page.tsx's handleVerifyEmailClick): a code is

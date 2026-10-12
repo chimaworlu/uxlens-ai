@@ -64,19 +64,9 @@ export async function POST(
     throw error;
   }
 
-  const user = await prisma.user.findUniqueOrThrow({
-    where: { id: userId },
-    select: { emailVerified: true },
-  });
-  // .agent/rules/security.md / PRD: email verification gates chat, same as
-  // analysis.
-  if (!user.emailVerified) {
-    return NextResponse.json(
-      { error: "Please verify your email before using chat." },
-      { status: 403 }
-    );
-  }
-
+  // Email verification previously gated chat here too (PRD FR-2), removed
+  // for the same reason as app/api/projects/[id]/analysis/route.ts — see
+  // that file's comment. Re-add once email delivery works again.
   const readyDocumentCount = await prisma.document.count({
     where: { projectId, status: "READY" },
   });
