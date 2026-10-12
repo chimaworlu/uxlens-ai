@@ -99,7 +99,7 @@ export async function POST(request: NextRequest) {
   // left to accumulate — this is shared, public, ephemeral demo content,
   // never read back as "history" for anyone (see this file's own header
   // comment), so there's nothing to preserve past the 30-day retention
-  // the existing daily prune job (lib/pipeline/chat/prune.ts, FR-32)
+  // the existing daily run_chat_message_pruning pg_cron job (FR-32)
   // already enforces for every other soft-deleted chat message. The
   // citation panel still works during that window: it queries Citation
   // rows directly and never filters on the parent message's deletedAt.
