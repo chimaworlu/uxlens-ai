@@ -2,10 +2,12 @@
 
 UXLens AI turns raw UX research documents into structured, citable insights. See [`Docs/prd-uxlens-ai.md`](Docs/prd-uxlens-ai.md) for requirements and [`AGENTS.md`](AGENTS.md) for how this codebase is built.
 
+This repository is public for portfolio purposes only — see [`LICENSE`](LICENSE). It is not open source.
+
 ## Local development setup
 
-1. Copy `.env.example` to `.env` and fill in the values you have (Postgres/Redis defaults already match `docker-compose.yml`).
-2. Start Postgres and Redis:
+1. Copy `.env.example` to `.env` and fill in the values you have (Postgres defaults already match `docker-compose.yml`). Document processing, the analysis pipeline, R2 cleanup, and the daily billing/chat-prune jobs run on Supabase (Edge Functions + pgmq + pg_cron) — see `supabase/functions/` — so those need a Supabase project, not anything in this compose file.
+2. Start Postgres:
    ```
    docker compose up -d
    ```
@@ -16,10 +18,6 @@ UXLens AI turns raw UX research documents into structured, citable insights. See
 4. Run the Next.js app:
    ```
    npm run dev
-   ```
-5. Run the worker (separate process, required for uploads/analysis):
-   ```
-   npm run worker
    ```
 
 ## Other commands
