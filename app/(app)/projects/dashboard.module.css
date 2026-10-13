@@ -569,9 +569,12 @@
     gap: var(--ds-spacing-sm);
   }
 
-  .main {
-    padding: var(--ds-spacing-lg);
-  }
+  /* .main's horizontal padding deliberately stays at the base
+     --ds-spacing-xxl at every width (no override here) — a smaller
+     value shrinks .content and makes buttons that fill it (New project,
+     Log Out, Cancel subscription) render wider than intended; kept
+     wide and consistent across the (app) pages by design, confirmed
+     against the reference screenshot. */
 
   .content {
     gap: var(--ds-spacing-lg);
@@ -607,10 +610,6 @@
 }
 
 @media (max-width: 420px) {
-  .main {
-    padding: var(--ds-spacing-md);
-  }
-
   .nav {
     padding: var(--ds-spacing-base) var(--ds-spacing-md);
   }
