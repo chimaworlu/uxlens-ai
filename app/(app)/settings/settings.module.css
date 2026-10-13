@@ -146,9 +146,11 @@
     padding: var(--ds-spacing-base) var(--ds-spacing-lg);
   }
 
-  /* .main's horizontal padding deliberately stays at the base
-     --ds-spacing-xxl at every width — see dashboard.module.css's
-     matching comment for why. */
+  /* .main's horizontal padding deliberately uses --ds-spacing-lg here
+     — see dashboard.module.css's matching comment for why. */
+  .main {
+    padding: var(--ds-spacing-lg);
+  }
 
   .content {
     align-items: stretch;
