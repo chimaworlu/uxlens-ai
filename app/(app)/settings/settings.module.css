@@ -152,6 +152,13 @@
 
   .content {
     align-items: stretch;
+    /* Uncapped at mobile widths: this 480px cap exists for larger
+       screens, but if it's ever narrower than the actual available
+       width here, .main's justify-content: center would center the
+       capped content with extra margin beyond the padding, making this
+       page's content narrower than other (app) pages whose own cap
+       (e.g. the projects page's 880px) never engages at phone widths. */
+    max-width: none;
   }
 
   .heading {
