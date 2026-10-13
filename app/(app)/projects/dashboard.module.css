@@ -18,80 +18,6 @@
   background-color: var(--color-roles-surface);
 }
 
-@media (max-width: 720px) {
-  .nav {
-    padding: var(--ds-spacing-base) var(--ds-spacing-lg);
-    gap: var(--ds-spacing-sm);
-  }
-
-  .main {
-    padding: var(--ds-spacing-lg);
-  }
-
-  .content {
-    gap: var(--ds-spacing-lg);
-  }
-
-  .titleRow {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .titleRow .buttonPrimary {
-    width: 100%;
-  }
-
-  .modalOverlay {
-    padding: var(--ds-spacing-md);
-    align-items: flex-end;
-  }
-
-  .modal {
-    max-width: 100%;
-    padding: var(--ds-spacing-lg);
-  }
-
-  .modalActions {
-    flex-direction: column;
-  }
-
-  .modalActions .buttonPrimary,
-  .modalActions .buttonSecondary {
-    width: 100%;
-  }
-}
-
-@media (max-width: 420px) {
-  .main {
-    padding: var(--ds-spacing-md);
-  }
-
-  .nav {
-    padding: var(--ds-spacing-base) var(--ds-spacing-md);
-  }
-
-  .content {
-    gap: var(--ds-spacing-md);
-  }
-
-  .content,
-  .main,
-  .nav {
-    min-width: 0;
-  }
-
-  .emptyState {
-    padding: var(--ds-spacing-xl) var(--ds-spacing-md);
-  }
-}
-
-@media (max-height: 760px) {
-  .main {
-    padding-top: var(--ds-spacing-lg);
-    padding-bottom: var(--ds-spacing-lg);
-  }
-}
-
 .brand {
   color: var(--color-roles-primary);
 }
@@ -622,5 +548,91 @@
 @media (hover: hover) and (pointer: fine) {
   .buttonDanger:hover:not(:disabled) {
     filter: brightness(0.95);
+  }
+}
+
+/* These three media queries were previously declared near the top of this
+   file, before the base (non-media) rules for the same selectors below —
+   that ordering is a real bug, not just a style preference: CSS resolves
+   equal-specificity conflicts by source order, so for every property both
+   a media rule and a later unconditional rule set (e.g. .main's padding,
+   .content's gap, .titleRow's align-items), the later base rule silently
+   won even while the media query was genuinely active, no matter the
+   viewport. Confirmed directly: .main measured 32px padding (the desktop
+   value) at a 393px-wide viewport, where the 420px breakpoint should have
+   produced 12px. Moved here, after every selector they override, so the
+   cascade behaves as the names always implied. Keep any future addition
+   to these queries below the selectors it targets, not above. */
+@media (max-width: 720px) {
+  .nav {
+    padding: var(--ds-spacing-base) var(--ds-spacing-lg);
+    gap: var(--ds-spacing-sm);
+  }
+
+  .main {
+    padding: var(--ds-spacing-lg);
+  }
+
+  .content {
+    gap: var(--ds-spacing-lg);
+  }
+
+  .titleRow {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .titleRow .buttonPrimary {
+    width: 100%;
+  }
+
+  .modalOverlay {
+    padding: var(--ds-spacing-md);
+    align-items: flex-end;
+  }
+
+  .modal {
+    max-width: 100%;
+    padding: var(--ds-spacing-lg);
+  }
+
+  .modalActions {
+    flex-direction: column;
+  }
+
+  .modalActions .buttonPrimary,
+  .modalActions .buttonSecondary {
+    width: 100%;
+  }
+}
+
+@media (max-width: 420px) {
+  .main {
+    padding: var(--ds-spacing-md);
+  }
+
+  .nav {
+    padding: var(--ds-spacing-base) var(--ds-spacing-md);
+  }
+
+  .content {
+    gap: var(--ds-spacing-md);
+  }
+
+  .content,
+  .main,
+  .nav {
+    min-width: 0;
+  }
+
+  .emptyState {
+    padding: var(--ds-spacing-xl) var(--ds-spacing-md);
+  }
+}
+
+@media (max-height: 760px) {
+  .main {
+    padding-top: var(--ds-spacing-lg);
+    padding-bottom: var(--ds-spacing-lg);
   }
 }

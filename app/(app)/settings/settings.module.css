@@ -158,11 +158,8 @@
     align-self: auto;
   }
 
-  /* .content's align-items: stretch above would otherwise stretch this
-     to full width — naturally sized instead, same as the projects
-     page's "New project" button, which isn't stretched either. */
   .logOutButton {
-    align-self: flex-start;
+    width: 100%;
   }
 }
 
