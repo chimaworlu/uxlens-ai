@@ -329,12 +329,6 @@
     padding: var(--ds-spacing-lg);
   }
 
-  /* Uncapped at mobile widths — see settings.module.css's .content rule
-     in this same breakpoint for why. */
-  .content {
-    max-width: none;
-  }
-
   .planRow {
     flex-direction: column;
     align-items: flex-start;
@@ -345,19 +339,10 @@
     align-self: stretch;
   }
 
-  .buttonDanger {
-    width: 100%;
-  }
-
-  .cancelConfirmActions {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .buttonOutlined,
-  .buttonDangerSolid {
-    width: 100%;
-  }
+  /* Naturally sized, not stretched — same as the projects page's "New
+     project" button. .cancelSection isn't a flex column (no stretch to
+     override), so no explicit align-self is needed here unlike
+     settings.module.css's .logOutButton. */
 }
 
 @media (max-width: 420px) {
