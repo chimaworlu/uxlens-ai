@@ -44,6 +44,63 @@ async function extractPdf(buffer: Buffer): Promise<ExtractionResult> {
   }
 }
 
+// Lightweight page-count check (no text extraction) — used by doc-processing
+// to decide, before committing to a full extraction attempt, whether a PDF
+// has enough pages that extracting all of them in one call risks exceeding
+// the Edge Function's memory limit. Deciding this upfront matters because
+// that crash is a platform-level kill, not a catchable JS exception, so
+// there's no "try the fast path, fall back on failure" option here.
+export async function getPdfPageCount(buffer: Buffer): Promise<number> {
+  const parser = new PDFParse({ data: buffer });
+  try {
+    const info = await parser.getInfo();
+    return info.total || 1;
+  } finally {
+    await parser.destroy();
+  }
+}
+
+// Extracts just one inclusive page range, so peak memory for this call stays
+// bounded by the batch size rather than the document's total page count —
+// doc-processing chains calls to this across multiple invocations for PDFs
+// large enough to need it. Returns raw, unnormalized text with the same
+// "[Page N]" markers extractPdf produces, scoped to this range; normalize()
+// and the scanned-PDF check run once, by the caller, after all batches for
+// a document are concatenated (see finalizePdfBatches below).
+export async function extractPdfPageRange(
+  buffer: Buffer,
+  first: number,
+  last: number
+): Promise<string> {
+  const parser = new PDFParse({ data: buffer });
+  try {
+    const result = await parser.getText({ first, last });
+    return result.pages.map((page) => `[Page ${page.num}]\n${page.text}`).join("\n\n");
+  } finally {
+    await parser.destroy();
+  }
+}
+
+// Mirrors extractPdf's tail validation (normalize + scanned-PDF check), for
+// use once a batched PDF's pages have all been accumulated.
+export function finalizePdfBatches(rawText: string, pageCount: number): string {
+  const extractedText = normalize(rawText);
+
+  if (extractedText.length === 0) {
+    throw new ExtractionError("No text extracted", "This file contains no readable text content.");
+  }
+
+  const averageCharsPerPage = extractedText.length / pageCount;
+  if (averageCharsPerPage < MIN_CHARS_PER_PAGE) {
+    throw new ExtractionError(
+      "PDF has no meaningful extractable text",
+      "This PDF contains no extractable text. It may be a scanned image, which isn't supported yet."
+    );
+  }
+
+  return extractedText;
+}
+
 async function extractDocx(buffer: Buffer): Promise<ExtractionResult> {
   const result = await mammoth.extractRawText({ buffer });
   return { text: result.value, pageCount: null };
