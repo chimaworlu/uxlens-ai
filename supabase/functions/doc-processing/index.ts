@@ -62,6 +62,20 @@ async function handle(): Promise<Response> {
          VALUES (gen_random_uuid()::text, $1, $2::bigint, $3::jsonb, $4, $5)`,
         [QUEUE_NAME, msgId, JSON.stringify(payload), readCount, "Exceeded retry limit"]
       );
+      // Reaching the retry ceiling here means every attempt crashed before
+      // the try/catch below could run (e.g. the platform killing the whole
+      // invocation for exceeding its memory limit, which no in-function
+      // error handling can catch) — so unlike the normal FAILED path
+      // further down, nothing has marked this document FAILED yet. Without
+      // this, the document is left showing "Extracting" in the UI forever
+      // with no error ever surfacing.
+      await client.query(
+        `UPDATE "Document" SET "status" = 'FAILED', "failureReason" = $1 WHERE "id" = $2`,
+        [
+          "This file could not be processed after multiple attempts. It may be too large or complex to extract — try a smaller or simpler file.",
+          payload.documentId,
+        ]
+      );
       await client.query(`SELECT pgmq.archive($1::text, $2::bigint)`, [QUEUE_NAME, msgId]);
       return Response.json({ processed: false, reason: "dead-lettered", documentId: payload.documentId });
     }
