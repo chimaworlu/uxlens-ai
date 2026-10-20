@@ -192,7 +192,17 @@ async function processPdfBatch(
       JSON.stringify({ documentId, pdfBatch: { startPage: endPage + 1, totalPages } }),
     ]);
     await client.query(`SELECT pgmq.archive($1::text, $2::bigint)`, [QUEUE_NAME, msgId]);
-    fetch(SELF_URL, { method: "POST" }).catch(() => {});
+    // A bare fire-and-forget fetch here is unreliable: Supabase can
+    // reclaim this invocation's execution the moment the response below is
+    // sent, killing an un-awaited outbound request before it actually
+    // leaves, the same class of issue this app already works around for
+    // Vercel's background-work freeze (see lib/email/nodemailer.ts's
+    // comment). EdgeRuntime.waitUntil keeps this invocation alive just
+    // long enough for the trigger request to actually go out, without
+    // delaying the response itself. Confirmed needed: without it, chaining
+    // fell back to the once-a-minute cron poller instead of the
+    // near-instant handoff this is supposed to give.
+    EdgeRuntime.waitUntil(fetch(SELF_URL, { method: "POST" }).catch(() => {}));
     return Response.json({ processed: true, documentId, pdfBatch: { startPage, endPage, totalPages } });
   }
 
