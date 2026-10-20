@@ -291,7 +291,7 @@ export default function DemoPage() {
         <Link href="/" className={`${layout.brand} ds-title-large`}>
           UXLens AI
         </Link>
-        <Link href="/auth" className={`${styles.signupCta} ds-label-large`}>
+        <Link href="/auth?view=sign-up" className={`${styles.signupCta} ds-label-large`}>
           Sign up free
         </Link>
       </nav>
@@ -369,7 +369,7 @@ export default function DemoPage() {
                           You&apos;ve reached the demo&apos;s {CHAT_MESSAGE_LIMIT}-message limit. Sign up
                           for unlimited chat on your own research.
                         </span>
-                        <Link href="/auth" className={`${chatStyles.capBannerLink} ds-label-medium`}>
+                        <Link href="/auth?view=sign-up" className={`${chatStyles.capBannerLink} ds-label-medium`}>
                           Sign up
                         </Link>
                       </div>
