@@ -301,6 +301,12 @@
     --color-roles-on-error: var(--primitives-neutral-color-palette-neutral10);
     --color-roles-error-container: var(--primitives-error-color-palette-error30);
     --color-roles-on-error-container: var(--primitives-error-color-palette-error90);
+    /* Same 98<->10 inversion the surface/on-surface pair below uses
+       (neutral98 light -> neutral10 dark), just on the error ramp instead
+       of neutral: error98 is "barely-there pink tint on white", error10 is
+       its dark analog, "barely-there red tint on near-black" — not an
+       invented hex, same derivation method as every other role here. */
+    --color-roles-error-surface: var(--primitives-error-color-palette-error10);
 
     --color-roles-success: #97d89a; /* derived: success40 (#37953c) hue/sat, L->72% */
     --color-roles-on-success: var(--primitives-neutral-color-palette-neutral10);
